@@ -29,6 +29,8 @@ weather:
     base-url: https://nominatim.openstreetmap.org
     user-agent: weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)
     timeout: 5s
+    cache:
+      ttl: 720h  # 30 days
 
 logging:
   level:

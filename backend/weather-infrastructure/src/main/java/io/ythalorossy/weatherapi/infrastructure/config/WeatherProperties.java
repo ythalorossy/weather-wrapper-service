@@ -29,6 +29,15 @@ public class WeatherProperties {
     public static class Cache {
         private Duration ttl = Duration.ofHours(12);
 
+        public Cache() {
+            // default 12h, used for weather.cache.ttl
+        }
+
+        public Cache(Duration defaultTtl) {
+            // explicit default for nested caches (e.g., geocoding.cache.ttl)
+            this.ttl = defaultTtl;
+        }
+
         public Duration getTtl() { return ttl; }
         public void setTtl(Duration ttl) { this.ttl = ttl; }
     }
@@ -52,6 +61,7 @@ public class WeatherProperties {
         private String baseUrl = "https://nominatim.openstreetmap.org";
         private String userAgent = "weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)";
         private Duration timeout = Duration.ofSeconds(5);
+        private Cache cache = new Cache(Duration.ofDays(30));
 
         public String getBaseUrl() { return baseUrl; }
         public void setBaseUrl(String baseUrl) { this.baseUrl = baseUrl; }
@@ -61,5 +71,8 @@ public class WeatherProperties {
 
         public Duration getTimeout() { return timeout; }
         public void setTimeout(Duration timeout) { this.timeout = timeout; }
+
+        public Cache getCache() { return cache; }
+        public void setCache(Cache cache) { this.cache = cache; }
     }
 }

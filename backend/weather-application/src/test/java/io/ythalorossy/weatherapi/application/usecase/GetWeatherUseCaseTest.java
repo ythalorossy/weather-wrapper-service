@@ -6,6 +6,7 @@ import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
+import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +32,8 @@ class GetWeatherUseCaseTest {
 
     private GeocodingProvider geocoding;
     private WeatherProvider weather;
-    private WeatherCache cache;
+    private WeatherCache weatherCache;
+    private LocationCache locationCache;
     private GetWeatherUseCase useCase;
 
     private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
@@ -42,34 +44,63 @@ class GetWeatherUseCaseTest {
             "NWS"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String CACHE_KEY = "weather:38.88,-77.09";
+    private static final String GEO_KEY = "geo:arlington, va";
+    private static final String WEATHER_KEY = "weather:38.88,-77.09";
 
     @BeforeEach
     void setUp() {
         geocoding = mock(GeocodingProvider.class);
         weather = mock(WeatherProvider.class);
-        cache = mock(WeatherCache.class);
-        useCase = new GetWeatherUseCase(geocoding, weather, cache, Duration.ofHours(12));
+        weatherCache = mock(WeatherCache.class);
+        locationCache = mock(LocationCache.class);
+        useCase = new GetWeatherUseCase(
+                geocoding, weather, weatherCache, locationCache,
+                Duration.ofHours(12), Duration.ofDays(30));
     }
 
+    // -- Happy path: cache hit on both layers
+
     @Test
-    void cacheHitReturnsCachedForecastWithoutCallingUpstream() {
-        when(geocoding.findLocation(CITY)).thenReturn(Optional.of(arlington));
-        when(cache.get(CACHE_KEY)).thenReturn(Optional.of(forecast));
+    void fullCacheHitReturnsWithoutCallingUpstream() {
+        when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(arlington));
+        when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.of(forecast));
 
         WeatherQueryResult result = useCase.execute(CITY);
 
         assertThat(result.location()).isEqualTo(arlington);
         assertThat(result.forecast()).isEqualTo(forecast);
+        verify(geocoding, never()).findLocation(anyString());
         verify(weather, never()).getForecast(any());
-        verify(cache, never()).put(anyString(), any(), any());
+        verify(locationCache, never()).put(anyString(), any(), any());
+        verify(weatherCache, never()).put(anyString(), any(), any());
     }
 
+    // -- Layer 1: geocoding cache hit, weather cache miss
+
     @Test
-    void cacheMissCallsUpstreamAndWritesThrough() {
-        when(geocoding.findLocation(CITY)).thenReturn(Optional.of(arlington));
-        when(cache.get(CACHE_KEY)).thenReturn(Optional.empty());
+    void locationCacheHitSkipsGeocoderAndStillFetchesForecastOnWeatherMiss() {
+        when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(arlington));
+        when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.empty());
         when(weather.getForecast(arlington)).thenReturn(forecast);
+
+        WeatherQueryResult result = useCase.execute(CITY);
+
+        assertThat(result.forecast()).isEqualTo(forecast);
+        verify(geocoding, never()).findLocation(anyString());
+
+        ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
+        verify(weatherCache).put(eq(WEATHER_KEY), eq(forecast), ttlCaptor.capture());
+        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofHours(12));
+        verify(locationCache, never()).put(anyString(), any(), any());
+    }
+
+    // -- Layer 1: geocoding cache miss, geocoder hit, weather cache hit
+
+    @Test
+    void geocodingCacheMissCallsGeocoderAndWritesThrough() {
+        when(locationCache.get(GEO_KEY)).thenReturn(Optional.empty());
+        when(geocoding.findLocation(CITY)).thenReturn(Optional.of(arlington));
+        when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.of(forecast));
 
         WeatherQueryResult result = useCase.execute(CITY);
 
@@ -77,19 +108,48 @@ class GetWeatherUseCaseTest {
         assertThat(result.forecast()).isEqualTo(forecast);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
-        verify(cache).put(eq(CACHE_KEY), eq(forecast), ttlCaptor.capture());
-        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofHours(12));
+        verify(locationCache).put(eq(GEO_KEY), eq(arlington), ttlCaptor.capture());
+        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofDays(30));
+        verify(geocoding, never()).findLocation("different-city");  // never called twice
     }
 
+    // -- Both layers miss: full upstream call
+
     @Test
-    void unknownCityThrowsLocationNotFound() {
+    void bothCachesMissCallsBothUpstreamsAndWritesThroughBoth() {
+        when(locationCache.get(GEO_KEY)).thenReturn(Optional.empty());
+        when(geocoding.findLocation(CITY)).thenReturn(Optional.of(arlington));
+        when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.empty());
+        when(weather.getForecast(arlington)).thenReturn(forecast);
+
+        WeatherQueryResult result = useCase.execute(CITY);
+
+        assertThat(result.forecast()).isEqualTo(forecast);
+
+        ArgumentCaptor<Duration> locationTtl = ArgumentCaptor.forClass(Duration.class);
+        verify(locationCache).put(eq(GEO_KEY), eq(arlington), locationTtl.capture());
+        assertThat(locationTtl.getValue()).isEqualTo(Duration.ofDays(30));
+
+        ArgumentCaptor<Duration> weatherTtl = ArgumentCaptor.forClass(Duration.class);
+        verify(weatherCache).put(eq(WEATHER_KEY), eq(forecast), weatherTtl.capture());
+        assertThat(weatherTtl.getValue()).isEqualTo(Duration.ofHours(12));
+    }
+
+    // -- City not found (negative path)
+
+    @Test
+    void unknownCityThrowsLocationNotFoundAndDoesNotWriteNegativeCache() {
+        when(locationCache.get("geo:nowhereville")).thenReturn(Optional.empty());
         when(geocoding.findLocation("NowhereVille")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute("NowhereVille"))
                 .isInstanceOf(LocationNotFoundException.class);
         verify(weather, never()).getForecast(any());
-        verify(cache, never()).put(anyString(), any(), any());
+        verify(weatherCache, never()).put(anyString(), any(), any());
+        verify(locationCache, never()).put(anyString(), any(), any());
     }
+
+    // -- Input validation
 
     @Test
     void blankCityRejected() {
@@ -105,23 +165,46 @@ class GetWeatherUseCaseTest {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    // -- Constructor validation
+
     @Test
     void constructorRejectsNullCollaborators() {
-        assertThatThrownBy(() -> new GetWeatherUseCase(null, weather, cache, Duration.ofHours(1)))
+        assertThatThrownBy(() -> new GetWeatherUseCase(null, weather, weatherCache, locationCache,
+                Duration.ofHours(1), Duration.ofDays(1)))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, null, cache, Duration.ofHours(1)))
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, null, weatherCache, locationCache,
+                Duration.ofHours(1), Duration.ofDays(1)))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, null, Duration.ofHours(1)))
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, null, locationCache,
+                Duration.ofHours(1), Duration.ofDays(1)))
                 .isInstanceOf(NullPointerException.class);
-        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, cache, null))
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, null,
+                Duration.ofHours(1), Duration.ofDays(1)))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                null, Duration.ofDays(1)))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ofHours(1), null))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
-    void constructorRejectsNonPositiveTtl() {
-        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, cache, Duration.ZERO))
+    void constructorRejectsNonPositiveWeatherTtl() {
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ZERO, Duration.ofDays(1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("weatherCacheTtl");
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ofSeconds(-1), Duration.ofDays(1)))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, cache, Duration.ofSeconds(-1)))
-                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructorRejectsNonPositiveLocationTtl() {
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ofHours(1), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("locationCacheTtl");
     }
 }

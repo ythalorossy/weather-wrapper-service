@@ -36,16 +36,21 @@ flowchart LR
     API -->|6. JSON response| UI
 ```
 
-### Request flow (cache-aside)
+### Request flow (two-layer cache-aside)
 
-1. **Geocode** the city via Nominatim → `Location(lat, lon, displayName)`.
-2. **Cache key** = `weather:{lat:.2f},{lon:.2f}` (e.g., `weather:38.88,-77.09`).
-3. **GET** the key from Redis.
+1. **Geocoding cache lookup.** Cache key = `geo:{normalized-city}` where
+   `normalized-city` = trimmed + lower-cased + whitespace-collapsed.
+   So `Arlington, VA` / `arlington, va` / `  Arlington,  VA  ` all share
+   one slot. Default TTL: 30 days (`weather.geocoding.cache.ttl`).
+   - **Hit** → use the cached `Location`.
+   - **Miss** → call Nominatim, write through to cache.
+2. **Weather cache lookup.** Cache key = `weather:{lat:.2f},{lon:.2f}` (e.g., `weather:38.88,-77.09`).
+   Default TTL: 12 h (`weather.cache.ttl`).
    - **Hit** → return the cached forecast.
    - **Miss** → continue.
-4. **Two-step NWS call**: `/points/{lat},{lon}` → gridpoint triple, then `/gridpoints/{gridId}/{x},{y}/forecast`.
-5. **SET** the forecast under the key with TTL `weather.cache.ttl` (default 12 h).
-6. Return the forecast.
+3. **Two-step NWS call**: `/points/{lat},{lon}` → gridpoint triple, then `/gridpoints/{gridId}/{x},{y}/forecast`.
+4. **SET** the forecast under the weather key with the weather cache TTL.
+5. Return the forecast.
 
 ---
 
@@ -150,6 +155,7 @@ overridden via environment variables (Spring Boot relaxed binding).
 | `weather.geocoding.base-url`   | `https://nominatim.openstreetmap.org` | `WEATHER_GEOCODING_BASE_URL` |
 | `weather.geocoding.user-agent` | `weather-wrapper-service/0.1.0 (…)` | `WEATHER_GEOCODING_USER_AGENT` |
 | `weather.geocoding.timeout`    | `5s`                               | `WEATHER_GEOCODING_TIMEOUT` |
+| `weather.geocoding.cache.ttl`  | `720h` (30 days)                   | `WEATHER_GEOCODING_CACHE_TTL` |
 | `spring.data.redis.host`       | `localhost`                        | `REDIS_HOST`             |
 | `spring.data.redis.port`       | `6379`                             | `REDIS_PORT`             |
 | `server.port`                  | `8080`                             | `SERVER_PORT`            |
@@ -224,15 +230,15 @@ Test layout:
 |-------------------------------------------|-----------------------------------------------------------------------|------------------------------------------|
 | Public Nominatim (no self-host)           | Single-purpose geocoder; the product is the weather wrapper, not OSM  | Self-host Photon if traffic grows        |
 | Lat/lon cache key (not city name)         | "Arlington VA" vs "arlington, va" share a slot; same coords = same forecast | If you add per-user context              |
-| 12-hour TTL                               | NWS forecast updates hourly; 12h is comfortable for a wrapper         | Tighten to 30–60 min for production      |
-| No geocoding cache                        | Simpler port; Nominatim is fast and free                              | Add a second `WeatherCache`-style port if rate-limited |
-| No negative caching                       | Keeps the v1 simple                                                   | Cache failures for ~60s to absorb NWS blips |
+| Two-layer cache (geo + weather)           | Nominatim rate-limits at ~1 req/s; caching city→location absorbs traffic | If traffic exceeds Redis capacity        |
+| 12-hour weather TTL / 30-day geo TTL      | NWS forecast updates hourly; lat/lon for a city rarely changes        | Tighten to 30–60 min for production      |
+| No negative caching                       | Keeps the v2 simple; a sentinel for "cached as not-found" adds complexity | Cache failures for ~60s to absorb blips  |
 | No single-flight / stampede protection    | Premature for a single-user wrapper                                   | Add Caffeine in-process + per-key locks if traffic warrants |
 | Spring Boot over lighter frameworks       | Matches existing stack; mature Redis/HTTP/validation/observability    | Already optimal                          |
 
 ### Future enhancements
 
-- **Geocoding cache** via a second port keyed by normalized city name
+- **Negative caching** for geocoding (cache "no match" with short TTL) — protects Nominatim from a flood of bad-city queries
 - **Reactive variant** on `WebClient` if you need higher concurrency without blocking threads
 - **OpenAPI spec** generation via springdoc-openapi
 - **Rate limiting** at the API layer (Bucket4j) to protect upstream

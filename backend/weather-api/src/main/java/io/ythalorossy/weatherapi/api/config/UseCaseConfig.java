@@ -2,6 +2,7 @@ package io.ythalorossy.weatherapi.api.config;
 
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
+import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import io.ythalorossy.weatherapi.infrastructure.config.WeatherProperties;
@@ -23,12 +24,15 @@ public class UseCaseConfig {
             GeocodingProvider geocodingProvider,
             WeatherProvider weatherProvider,
             WeatherCache weatherCache,
+            LocationCache locationCache,
             WeatherProperties properties) {
         return new GetWeatherUseCase(
                 geocodingProvider,
                 weatherProvider,
                 weatherCache,
-                properties.getCache().getTtl()
+                locationCache,
+                properties.getCache().getTtl(),
+                properties.getGeocoding().getCache().getTtl()
         );
     }
 }

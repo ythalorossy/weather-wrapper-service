@@ -1,6 +1,7 @@
 package io.ythalorossy.weatherapi.domain.model;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * Geographic location value object. Immutable.
@@ -13,6 +14,9 @@ public record Location(
         double longitude,
         String displayName
 ) {
+
+    /** Matches one or more whitespace characters. */
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     public Location {
         if (latitude < -90.0 || latitude > 90.0) {
@@ -34,5 +38,25 @@ public record Location(
      */
     public String weatherCacheKey() {
         return String.format("weather:%.2f,%.2f", latitude, longitude);
+    }
+
+    /**
+     * Stable cache key for the geocoding lookup, derived from the user-entered
+     * city name. Normalization rules:
+     * <ul>
+     *   <li>Leading and trailing whitespace trimmed.</li>
+     *   <li>ASCII case-folded to lower-case.</li>
+     *   <li>Internal runs of whitespace collapsed to a single space.</li>
+     * </ul>
+     * Out of scope: diacritic stripping ({@code "Bogotá"} vs {@code "Bogota"}),
+     * abbreviation expansion ({@code "Arlington, VA"} vs {@code "Arlington Virginia"}).
+     *
+     * @param cityName user-entered city name; must not be null
+     * @return the cache key, e.g., {@code "geo:arlington, va"}
+     */
+    public static String geocodingCacheKey(String cityName) {
+        Objects.requireNonNull(cityName, "cityName");
+        String normalized = WHITESPACE.matcher(cityName.trim().toLowerCase()).replaceAll(" ");
+        return "geo:" + normalized;
     }
 }

@@ -66,4 +66,30 @@ class LocationTest {
         Location b = new Location(38.8814999, -77.0909999, "B");
         assertThat(a.weatherCacheKey()).isEqualTo(b.weatherCacheKey());
     }
+
+    @Test
+    void geocodingCacheKeyTrimsAndLowercases() {
+        assertThat(Location.geocodingCacheKey("Arlington, VA"))
+                .isEqualTo("geo:arlington, va");
+    }
+
+    @Test
+    void geocodingCacheKeyCollapsesInternalWhitespace() {
+        assertThat(Location.geocodingCacheKey("Arlington,   VA"))
+                .isEqualTo("geo:arlington, va");
+        assertThat(Location.geocodingCacheKey("  Arlington ,  VA  "))
+                .isEqualTo("geo:arlington , va");
+    }
+
+    @Test
+    void geocodingCacheKeyRejectsNull() {
+        assertThatThrownBy(() -> Location.geocodingCacheKey(null))
+                .isInstanceOf(NullPointerException.class);
+    }
+
+    @Test
+    void geocodingCacheKeyCollapsesNewlinesAndTabs() {
+        assertThat(Location.geocodingCacheKey("Arlington,\n\tVA"))
+                .isEqualTo("geo:arlington, va");
+    }
 }
