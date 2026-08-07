@@ -1,0 +1,246 @@
+# Weather Wrapper Service
+
+A Spring Boot wrapper around the [National Weather Service API](https://www.weather.gov/documentation/services-web-api)
+with a Redis-backed **cache-aside** pattern for forecasts.
+
+```
+GET /api/v1/weather?city=Arlington,%20VA   →   forecast JSON
+```
+
+Geocoding (city → lat/lon) is delegated to [Nominatim](https://nominatim.openstreetmap.org/).
+Cache keys are derived from the resolved location (lat/lon rounded to 2 decimals ≈ 1.1 km)
+so trivial city-name variations share a slot.
+
+---
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI([Weather App UI<br/>future])
+    API[Weather API<br/>Spring Boot]
+    Cache[(Redis<br/>cache-aside)]
+    Geo[Nominatim<br/>public.openstreetmap.org]
+    NWS[api.weather.gov<br/>NWS]
+
+    UI -->|1. GET /weather?city=…| API
+    API -->|2a. check cache| Cache
+    Cache -.->|2b. hit| API
+    API -->|3a. miss → geocode| Geo
+    Geo -.->|3b. lat/lon| API
+    API -->|4a. /points/ lat,lon| NWS
+    NWS -.->|4b. gridpoint triple| API
+    API -->|4c. /gridpoints/.../forecast| NWS
+    NWS -.->|4d. forecast periods| API
+    API -->|5. SET key value EX 43200| Cache
+    API -->|6. JSON response| UI
+```
+
+### Request flow (cache-aside)
+
+1. **Geocode** the city via Nominatim → `Location(lat, lon, displayName)`.
+2. **Cache key** = `weather:{lat:.2f},{lon:.2f}` (e.g., `weather:38.88,-77.09`).
+3. **GET** the key from Redis.
+   - **Hit** → return the cached forecast.
+   - **Miss** → continue.
+4. **Two-step NWS call**: `/points/{lat},{lon}` → gridpoint triple, then `/gridpoints/{gridId}/{x},{y}/forecast`.
+5. **SET** the forecast under the key with TTL `weather.cache.ttl` (default 12 h).
+6. Return the forecast.
+
+---
+
+## Tech stack
+
+| Layer            | Choice                                                       |
+|------------------|--------------------------------------------------------------|
+| Language         | Java 21                                                      |
+| Framework        | Spring Boot 3.3.5 (web, validation, actuator, data-redis)    |
+| Build            | Maven (multi-module)                                         |
+| Cache            | Redis 7 via Spring Data Redis (Lettuce)                      |
+| HTTP client      | Spring `RestClient` (Spring Framework 6.1+)                  |
+| Geocoding        | Public Nominatim (no key, rate-limited to ~1 req/s)          |
+| Weather          | NWS `api.weather.gov` (no key, US-only, lat/lon, requires UA)|
+| Tests            | JUnit 5, Mockito, AssertJ, WireMock 3, Testcontainers (Redis)|
+| Containerization | Multi-stage Docker (Maven 3.9 + Temurin 21 JRE)              |
+
+---
+
+## Module layout
+
+```
+backend/
+├── pom.xml                          # Parent POM (dependency & plugin management)
+├── weather-domain/                  # Pure domain: value objects, port interfaces, exceptions
+│   └── src/main/java/io/ythalorossy/weatherapi/domain/
+│       ├── model/                   # Location, Temperature, ForecastPeriod, WeatherForecast
+│       ├── port/                    # GeocodingProvider, WeatherProvider, WeatherCache
+│       └── exception/               # LocationNotFoundException, WeatherProviderUnavailableException
+│
+├── weather-application/             # Use cases (plain Java, no Spring)
+│   └── src/main/java/io/ythalorossy/weatherapi/application/
+│       └── usecase/                 # GetWeatherUseCase + WeatherQueryResult
+│
+├── weather-infrastructure/          # Adapters implementing domain ports
+│   └── src/main/java/io/ythalorossy/weatherapi/infrastructure/
+│       ├── config/                  # WeatherProperties, RestClientConfig
+│       ├── geocoding/               # NominatimGeocodingProvider + DTOs
+│       ├── weather/                 # NwsWeatherProvider + DTOs
+│       └── cache/                   # RedisWeatherCache
+│
+└── weather-api/                     # Spring Boot application: REST controller, config, entry point
+    └── src/main/java/io/ythalorossy/weatherapi/api/
+        ├── WeatherApiApplication.java
+        ├── controller/              # WeatherController
+        ├── dto/                     # WeatherResponse
+        ├── exception/               # GlobalExceptionHandler (RFC 9457 ProblemDetail)
+        └── config/                  # UseCaseConfig (wires plain-Java use case into Spring)
+
+web/                                 # UI placeholder (React later)
+```
+
+The dependency graph is strictly one-way:
+`domain ← application ← infrastructure` and `domain, application, infrastructure ← api`.
+Domain has no Spring, no Jackson, no Redis — just Java.
+
+---
+
+## Running locally
+
+### With Docker (recommended — handles Java, Maven, Redis)
+
+```bash
+docker compose up --build
+```
+
+The API comes up on `http://localhost:8080`. Redis is on `localhost:6379`.
+
+```bash
+# Sanity check
+curl http://localhost:8080/actuator/health
+
+# Get a forecast
+curl 'http://localhost:8080/api/v1/weather?city=Arlington,%20VA'
+```
+
+### Without Docker (requires Java 21 + Maven 3.9 on the host)
+
+```bash
+# Start Redis any way you like, e.g.:
+docker run -d -p 6379:6379 --name redis redis:7-alpine
+
+# Build & run
+cd backend
+mvn -DskipTests package
+java -jar weather-api/target/weather-api-*.jar
+```
+
+---
+
+## Configuration
+
+All settings live under the `weather.*` tree in `application.yml` and can be
+overridden via environment variables (Spring Boot relaxed binding).
+
+| Property                       | Default                            | Env var override         |
+|--------------------------------|------------------------------------|--------------------------|
+| `weather.cache.ttl`            | `12h`                              | `WEATHER_CACHE_TTL`      |
+| `weather.provider.base-url`    | `https://api.weather.gov`          | `WEATHER_PROVIDER_BASE_URL` |
+| `weather.provider.user-agent`  | `weather-wrapper-service/0.1.0 (…)` | `WEATHER_PROVIDER_USER_AGENT` |
+| `weather.provider.timeout`     | `10s`                              | `WEATHER_PROVIDER_TIMEOUT` |
+| `weather.geocoding.base-url`   | `https://nominatim.openstreetmap.org` | `WEATHER_GEOCODING_BASE_URL` |
+| `weather.geocoding.user-agent` | `weather-wrapper-service/0.1.0 (…)` | `WEATHER_GEOCODING_USER_AGENT` |
+| `weather.geocoding.timeout`    | `5s`                               | `WEATHER_GEOCODING_TIMEOUT` |
+| `spring.data.redis.host`       | `localhost`                        | `REDIS_HOST`             |
+| `spring.data.redis.port`       | `6379`                             | `REDIS_PORT`             |
+| `server.port`                  | `8080`                             | `SERVER_PORT`            |
+
+**Why a User-Agent?** Both NWS and Nominatim require a descriptive `User-Agent`
+identifying the caller. NWS returns `403` without one; Nominatim will silently
+rate-limit you into oblivion. Change it to your own contact info for any
+non-toy deployment.
+
+---
+
+## API
+
+### `GET /api/v1/weather?city={city}`
+
+| Status | When                                            | Body                                     |
+|--------|-------------------------------------------------|------------------------------------------|
+| `200`  | Success                                         | `WeatherResponse` (see below)            |
+| `400`  | `city` is missing or blank                      | RFC 9457 `ProblemDetail`                 |
+| `404`  | City not found by Nominatim                     | `ProblemDetail` with `city` property     |
+| `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
+
+### Example response
+
+```json
+{
+  "city": "Arlington, VA",
+  "resolvedLocation": {
+    "latitude": 38.8816,
+    "longitude": -77.0910,
+    "displayName": "Arlington, Arlington County, Virginia, United States"
+  },
+  "forecast": {
+    "generatedAt": "2026-08-07T12:00:00Z",
+    "source": "National Weather Service (api.weather.gov)",
+    "periods": [
+      {
+        "name": "Today",
+        "temperature": { "value": 85, "unit": "FAHRENHEIT", "formatted": "85°F" },
+        "windSpeed": "5 mph",
+        "windDirection": "NW",
+        "shortForecast": "Sunny",
+        "detailedForecast": "Sunny, with a high near 85. Northwest wind around 5 mph.",
+        "daytime": true
+      }
+    ]
+  }
+}
+```
+
+---
+
+## Testing
+
+```bash
+cd backend
+mvn verify
+```
+
+Test layout:
+- **Unit:** domain value objects, `GetWeatherUseCase` orchestration (mocked ports)
+- **Adapter integration:** `RedisWeatherCache` (Testcontainers Redis),
+  `NominatimGeocodingProvider` (WireMock), `NwsWeatherProvider` (WireMock)
+- **Application integration:** `WeatherApiApplicationIT` — full Spring Boot context,
+  MockMvc, mocked upstream ports + real Testcontainers Redis
+
+---
+
+## Tradeoffs & future work
+
+| Decision                                  | Why                                                                   | When to revisit                          |
+|-------------------------------------------|-----------------------------------------------------------------------|------------------------------------------|
+| Public Nominatim (no self-host)           | Single-purpose geocoder; the product is the weather wrapper, not OSM  | Self-host Photon if traffic grows        |
+| Lat/lon cache key (not city name)         | "Arlington VA" vs "arlington, va" share a slot; same coords = same forecast | If you add per-user context              |
+| 12-hour TTL                               | NWS forecast updates hourly; 12h is comfortable for a wrapper         | Tighten to 30–60 min for production      |
+| No geocoding cache                        | Simpler port; Nominatim is fast and free                              | Add a second `WeatherCache`-style port if rate-limited |
+| No negative caching                       | Keeps the v1 simple                                                   | Cache failures for ~60s to absorb NWS blips |
+| No single-flight / stampede protection    | Premature for a single-user wrapper                                   | Add Caffeine in-process + per-key locks if traffic warrants |
+| Spring Boot over lighter frameworks       | Matches existing stack; mature Redis/HTTP/validation/observability    | Already optimal                          |
+
+### Future enhancements
+
+- **Geocoding cache** via a second port keyed by normalized city name
+- **Reactive variant** on `WebClient` if you need higher concurrency without blocking threads
+- **OpenAPI spec** generation via springdoc-openapi
+- **Rate limiting** at the API layer (Bucket4j) to protect upstream
+- **Metrics** in Micrometer + Prometheus format
+- **React UI** in `web/` (Vite + TanStack Query, calling `/api/v1/weather`)
+
+---
+
+## License
+
+TBD (add MIT/Apache-2.0 LICENSE file before going public).

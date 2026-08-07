@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: weather-wrapper-service
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 2s
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-message: always
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+weather:
+  cache:
+    ttl: 12h
+  provider:
+    base-url: https://api.weather.gov
+    user-agent: weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)
+    timeout: 10s
+  geocoding:
+    base-url: https://nominatim.openstreetmap.org
+    user-agent: weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)
+    timeout: 5s
+
+logging:
+  level:
+    io.ythalorossy.weatherapi: DEBUG
+    org.springframework.web.client: INFO

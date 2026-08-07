@@ -1,0 +1,46 @@
+# Build artifacts
+target/
+build/
+out/
+*.jar
+*.war
+*.ear
+
+# IDE
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.project
+.classpath
+.settings/
+.factorypath
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Maven
+.mvn/wrapper/maven-wrapper.jar
+
+# Spring Boot
+HELP.md
+
+# Local config
+.env
+.env.local
+*.local
+
+# Docker
+**/*.pid
+
+# Test reports
+test-output/
+surefire-reports/
+failsafe-reports/
+jacoco.exec
