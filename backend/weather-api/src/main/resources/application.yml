@@ -6,6 +6,13 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2s
+  threads:
+    virtual:
+      # Java 21 virtual threads (Project Loom) — Tomcat uses them for
+      # request handling, so blocking I/O on RestClient/etc. parks cheaply
+      # instead of holding an OS thread. Throughput for I/O-bound paths
+      # approaches reactive levels with zero code change.
+      enabled: true
 
 server:
   port: ${SERVER_PORT:8080}

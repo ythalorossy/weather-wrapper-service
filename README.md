@@ -499,6 +499,109 @@ weather_cache_weather_total{result="miss"} 0.0
 weather_provider_geocoding_seconds_count{outcome="success",service="weather-wrapper-service"} 1
 ```
 
+## Rate limiting
+
+Bucket4j token buckets, distributed over Redis via Lettuce, applied to the
+`/api/*` URL pattern only (actuator and Swagger UI are exempt).
+
+### Configuration
+
+```yaml
+weather:
+  rate-limit:
+    enabled: true              # set false in tests so multi-request tests still pass
+    burst:
+      capacity: 5
+      refill-period-seconds: 1
+    sustained:
+      capacity: 60
+      refill-period-seconds: 60
+```
+
+Two-bandwidth limit per client IP:
+
+| Bandwidth | Capacity | Refill | Why |
+|---|---|---|---|
+| **burst** | 5 | 5 tokens / second | Anti-hammer, Nominatim-friendly |
+| **sustained** | 60 | 60 tokens / minute | Long-term cap |
+
+A request consumes 1 token from *both* bandwidths; the more restrictive
+decides. So a real user can burst 5 quick requests, but then must slow
+to ~1/sec until the sustained bucket recovers (after ~60 seconds of
+inactivity at full capacity).
+
+### Client IP
+
+Key is taken from `X-Forwarded-For` (first hop) → `request.getRemoteAddr()`
+fallback. One bucket per IP, persisted in Redis with 10-minute TTL on
+idle buckets so we don't accumulate one-off entries forever.
+
+### 429 response
+
+When a bucket is exhausted:
+
+- HTTP `429 Too Many Requests`
+- `Retry-After: <seconds>` header
+- `X-RateLimit-Remaining: 0` header
+- Body: RFC 9457 `ProblemDetail`
+
+```json
+{
+  "type": "https://weather-wrapper-service.ythalorossy.io/errors/rate-limit-exceeded",
+  "title": "Rate limit exceeded",
+  "status": 429,
+  "detail": "Rate limit exceeded. Try again in 1 seconds.",
+  "properties": {
+    "retryAfterSeconds": 1
+  }
+}
+```
+
+On allowed requests, the filter sets `X-RateLimit-Remaining: <count>`.
+
+### Failure mode
+
+If Redis is unreachable, the filter **fails open** (logs a warning and
+allows the request through). Rate limiting is best-effort; a broken
+limiter should not take down the API.
+
+### Verification
+
+```bash
+$ for i in {1..7}; do curl -s -o /dev/null -w "req $i: HTTP %{http_code}\n" \
+    "http://localhost:8080/api/v1/weather?city=Arlington,%20VA"; done
+req 1: HTTP 200
+req 2: HTTP 200
+req 3: HTTP 200
+req 4: HTTP 200
+req 5: HTTP 200
+req 6: HTTP 200        # burst refilled ~greedy during the loop
+req 7: HTTP 429        # bucket exhausted, Retry-After: 1
+
+$ curl -s -o /dev/null -w "%{http_code}\n" -H "X-Forwarded-For: 1.2.3.4" \
+    "http://localhost:8080/api/v1/weather?city=Arlington,%20VA"
+200                  # independent bucket per IP
+```
+
+## Concurrency model: virtual threads
+
+Enabled via `spring.threads.virtual.enabled=true` in `application.yml`. Spring
+Boot 3.2+ swaps Tomcat's request thread pool from platform threads to Java 21
+virtual threads (Project Loom).
+
+**What this means:**
+- Blocking I/O on `RestClient` (Nominatim, NWS) parks the virtual thread cheaply (~1 KB stack) instead of holding an OS thread
+- Same imperative code (controllers, use cases, providers) — no `Mono<T>` / `Flux<T>` rewriting
+- Throughput for I/O-bound paths approaches reactive levels with zero code change
+- `jvm_threads_live_threads` stays flat even under concurrent load (peak 23 observed during a 20-request burst)
+
+**What we *don't* get:**
+- Streaming responses (SSE) — none of our endpoints need it
+- Full backpressure across the stack — `Bucket4j` + Nominatim's rate limits already do that
+
+**Tradeoff accepted:** virtual threads require Java 21, which is already this
+project's reference version.
+
 ## Tradeoffs & future work
 
 | Decision                                  | Why                                                                   | When to revisit                          |
@@ -513,11 +616,12 @@ weather_provider_geocoding_seconds_count{outcome="success",service="weather-wrap
 
 ### Future enhancements
 
-- **Reactive variant** on `WebClient` if you need higher concurrency without blocking threads
-- **OpenAPI spec** generation via springdoc-openapi
-- **Rate limiting** at the API layer (Bucket4j) to protect upstream
-- **Metrics** in Micrometer + Prometheus format
-- **React UI** in `web/` (Vite + TanStack Query, calling `/api/v1/weather`)
+- **OpenAPI spec** generation via springdoc-openapi ✅ done (`25e4497`)
+- **Rate limiting** at the API layer (Bucket4j) to protect upstream ✅ done (`0ebfff9`)
+- **Metrics** in Micrometer + Prometheus format ✅ done (`068892c`)
+- **React UI** in `web/` (Vite + TanStack Query) ✅ done (`5eb7b6b`)
+- ~~**Reactive variant** on WebClient~~ — covered by Java 21 virtual threads instead (cheaper, same effect)
+- LICENSE file (TBD in README header)
 
 ---
 
