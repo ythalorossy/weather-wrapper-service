@@ -71,6 +71,67 @@ As new use cases land in `weather-application/`, add a sub-section here
 following the same pattern: happy-path diagram + path matrix + (optional)
 focused diagrams for tricky branches.
 
+### End-to-end UI request
+
+Single submit → forecast rendered. Three cache layers along the way:
+**TanStack Query** in the browser (keyed on city, 30 min), **Redis** in
+the backend (geocoding 30 d + weather 12 h, plus negative caching on
+misses), and **NWS** upstream (we don't cache NWS responses — Redis
+backs the *wrapper's* responses).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant UI as SearchForm<br/>(React)
+    participant App as App.tsx
+    participant TQ as TanStack Query
+    participant API as WeatherController<br/>(Spring Boot)
+    participant UC as GetWeatherUseCase
+    participant LC as LocationCache<br/>(Redis)
+    participant GP as Nominatim
+    participant WC as WeatherCache<br/>(Redis)
+    participant NWS as api.weather.gov
+
+    User->>UI: type "Arlington, VA" + submit
+    UI->>App: setCity("Arlington, VA")
+    App->>TQ: useQuery(["weather","Arlington, VA"]) (enabled)
+    TQ->>API: GET /api/v1/weather?city=... (via Vite /api proxy)
+    API->>UC: execute(city)
+    UC->>LC: get(normalized-city)
+    alt cache miss
+        UC->>GP: GET /search?q=...&format=json
+        GP-->>UC: lat/lon + displayName
+        UC->>LC: put(geo:city → Location, TTL 30d)
+    else cache hit
+        LC-->>UC: Location
+    end
+    UC->>WC: get(weather:{lat:.2f},{lon:.2f})
+    alt cache miss
+        UC->>NWS: GET /points/{lat},{lon}
+        NWS-->>UC: gridId/x/y + forecast zones
+        UC->>NWS: GET /gridpoints/{g}/{x},{y}/forecast
+        NWS-->>UC: periods[]
+        UC->>WC: put(weather:... → forecast, TTL 12h)
+    else cache hit
+        WC-->>UC: forecast
+    end
+    UC-->>API: WeatherQueryResult
+    API-->>TQ: 200 WeatherResponse JSON
+    TQ->>TQ: store in cache (staleTime 30m, gcTime 60m)
+    TQ-->>App: { data, isPending: false }
+    App->>User: render <ForecastCard/>
+```
+
+#### Cache matrix
+
+| Layer | Key | TTL | Hit effect |
+|---|---|---|---|
+| TanStack Query | `["weather", city]` | staleTime 30 min / gcTime 60 min | Instant re-render, no network |
+| LocationCache (Redis) | `geo:{normalized-city}` | 30 d | Skips Nominatim |
+| LocationCache (Redis) | `absent:geo:{normalized-city}` | 60 s | Skips Nominatim, returns 404 |
+| WeatherCache (Redis) | `weather:{lat:.2f},{lon:.2f}` | 12 h | Skips both NWS calls |
+
 ### `GetWeatherUseCase`
 
 Resolves a city name to a `Location`, then resolves that `Location` to a
@@ -320,6 +381,14 @@ non-toy deployment.
 ---
 
 ## API
+
+The full machine-readable spec is served by springdoc-openapi:
+
+| URL                                       | Purpose                          |
+|-------------------------------------------|----------------------------------|
+| <http://localhost:8080/v3/api-docs>       | OpenAPI 3 spec, JSON             |
+| <http://localhost:8080/v3/api-docs.yaml>  | OpenAPI 3 spec, YAML             |
+| <http://localhost:8080/swagger-ui/index.html> | Interactive Swagger UI        |
 
 ### `GET /api/v1/weather?city={city}`
 

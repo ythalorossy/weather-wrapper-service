@@ -34,6 +34,7 @@
         <!-- Dependency versions managed here (not in Spring Boot BOM) -->
         <testcontainers.version>1.21.4</testcontainers.version>
         <wiremock.version>3.9.1</wiremock.version>
+        <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
     </properties>
 
     <dependencyManagement>
