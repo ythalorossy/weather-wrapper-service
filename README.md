@@ -17,7 +17,7 @@ so trivial city-name variations share a slot.
 
 ```mermaid
 flowchart LR
-    UI([Weather App UI<br/>future])
+    UI([Weather App UI<br/>Vite + React])
     API[Weather API<br/>Spring Boot]
     Cache[(Redis<br/>cache-aside)]
     Geo[Nominatim<br/>public.openstreetmap.org]
@@ -246,13 +246,29 @@ Domain has no Spring, no Jackson, no Redis — just Java.
 
 ## Running locally
 
-### With Docker (recommended — handles Java, Maven, Redis)
+### Backend
+
+**With Docker** (recommended — handles Java, Maven, Redis):
 
 ```bash
 docker compose up --build
 ```
 
 The API comes up on `http://localhost:8080`. Redis is on `localhost:6379`.
+
+### Frontend (Vite + React)
+
+The `web/` directory is a standalone Vite app that calls the backend at `/api/v1/weather`.
+Vite proxies `/api` to `http://localhost:8080`, so you must have the backend running first.
+
+```bash
+cd web
+npm install
+npm run dev          # http://localhost:5173
+npm run build        # type-check + production bundle into dist/
+```
+
+Open <http://localhost:5173>, type a city (e.g. `Arlington, VA`), and the forecast appears.
 
 ```bash
 # Sanity check
