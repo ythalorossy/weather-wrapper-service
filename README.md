@@ -621,10 +621,10 @@ project's reference version.
 - **Metrics** in Micrometer + Prometheus format ✅ done (`068892c`)
 - **React UI** in `web/` (Vite + TanStack Query) ✅ done (`5eb7b6b`)
 - ~~**Reactive variant** on WebClient~~ — covered by Java 21 virtual threads instead (cheaper, same effect)
-- LICENSE file (TBD in README header)
+- LICENSE file ✅ done (MIT)
 
 ---
 
 ## License
 
-TBD (add MIT/Apache-2.0 LICENSE file before going public).
+[MIT](LICENSE) — Copyright (c) 2026 Ythalo Rossy Saldanha Lira.
