@@ -32,7 +32,8 @@ public class UseCaseConfig {
                 weatherCache,
                 locationCache,
                 properties.getCache().getTtl(),
-                properties.getGeocoding().getCache().getTtl()
+                properties.getGeocoding().getCache().getTtl(),
+                properties.getGeocoding().getCache().getAbsentTtl()
         );
     }
 }

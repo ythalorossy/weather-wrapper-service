@@ -27,9 +27,13 @@ import org.testcontainers.utility.DockerImageName;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -150,6 +154,28 @@ class WeatherApiApplicationTest {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.title").value("Location not found"))
                 .andExpect(jsonPath("$.city").value("NowhereVille"));
+    }
+
+    @Test
+    void secondRequestForUnknownCityUsesAbsentCache() throws Exception {
+        // Simulate the markAbsent→isAbsent flow: first call to isAbsent returns
+        // false (not yet cached as absent), second returns true (post-markAbsent).
+        AtomicBoolean isAbsentFlip = new AtomicBoolean(false);
+        when(locationCache.isAbsent("geo:nowhereville"))
+                .thenAnswer(inv -> isAbsentFlip.getAndSet(true));
+        when(geocodingProvider.findLocation("NowhereVille")).thenReturn(Optional.empty());
+
+        // First request: 404 + geocoder hit
+        mvc.perform(get("/api/v1/weather").param("city", "NowhereVille"))
+                .andExpect(status().isNotFound());
+
+        // Second request: 404 from absent-cache hit, no geocoder call
+        mvc.perform(get("/api/v1/weather").param("city", "NowhereVille"))
+                .andExpect(status().isNotFound());
+
+        // Geocoder must have been called exactly once across both requests
+        verify(geocodingProvider, times(1)).findLocation("NowhereVille");
+        verify(locationCache).markAbsent(eq("geo:nowhereville"), any());
     }
 
     @Test

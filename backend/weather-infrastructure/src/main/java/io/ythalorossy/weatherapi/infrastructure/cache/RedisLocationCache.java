@@ -14,16 +14,25 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Redis adapter for {@link LocationCache}. Stores locations as JSON strings
- * under string keys with a TTL (Redis {@code SET … EX …}).
+ * Redis adapter for {@link LocationCache}. Stores positive locations as JSON
+ * under {@code geo:*} keys and negative results ("no upstream match") under
+ * {@code absent:geo:*} keys, both with TTLs (Redis {@code SET … EX …}).
  *
- * <p>Same JSON-on-strings pattern as {@link RedisWeatherCache} so the two
- * cache types coexist cleanly in a single Redis instance.
+ * <p>The separate prefix means a negative entry never shadows or pollutes a
+ * positive entry at the same logical key. {@link #get(String)} reads only
+ * the positive namespace; {@link #isAbsent(String)} reads only the negative
+ * namespace.
+ *
+ * <p>Same JSON-on-strings pattern as {@link RedisWeatherCache} so all cache
+ * types coexist cleanly in a single Redis instance.
  */
 @Component
 public class RedisLocationCache implements LocationCache {
 
     private static final Logger log = LoggerFactory.getLogger(RedisLocationCache.class);
+
+    /** Prefix added to keys for negative ("no match") entries. */
+    static final String ABSENT_PREFIX = "absent:";
 
     private final StringRedisTemplate redis;
     private final ObjectMapper mapper;
@@ -66,6 +75,34 @@ public class RedisLocationCache implements LocationCache {
             log.warn("Failed to serialize location for key '{}': {}", key, e.getMessage());
         } catch (Exception e) {
             log.warn("Redis SET failed for location key '{}': {}", key, e.getMessage());
+        }
+    }
+
+    @Override
+    public boolean isAbsent(String key) {
+        Objects.requireNonNull(key, "key");
+        try {
+            Boolean exists = redis.hasKey(ABSENT_PREFIX + key);
+            return Boolean.TRUE.equals(exists);
+        } catch (Exception e) {
+            // Redis down: don't block the request; treat as not-cached-absent
+            // so the caller falls through to the geocoder. Degraded but safe.
+            log.warn("Redis EXISTS failed for absent key '{}': {}", key, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public void markAbsent(String key, Duration ttl) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(ttl, "ttl");
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("ttl must be positive: " + ttl);
+        }
+        try {
+            redis.opsForValue().set(ABSENT_PREFIX + key, "1", ttl);
+        } catch (Exception e) {
+            log.warn("Redis SET failed for absent key '{}': {}", key, e.getMessage());
         }
     }
 }

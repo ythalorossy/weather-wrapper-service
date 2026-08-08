@@ -30,7 +30,8 @@ weather:
     user-agent: weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)
     timeout: 5s
     cache:
-      ttl: 720h  # 30 days
+      ttl: 720h        # 30 days for positive results
+      absent-ttl: 60s  # 60 seconds for negative results ("no such city")
 
 logging:
   level:

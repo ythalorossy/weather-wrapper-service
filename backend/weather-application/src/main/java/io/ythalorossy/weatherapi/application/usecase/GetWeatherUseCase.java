@@ -14,20 +14,26 @@ import java.util.Objects;
 /**
  * Cache-aside orchestration for the weather query use case.
  *
- * <p>Two-layer cache:
+ * <p>Two-layer cache with negative caching on the geocoding side:
  * <ol>
- *   <li>Geocoding cache: city name → {@link Location} (TTL = {@code locationCacheTtl}).
- *       Avoids hammering Nominatim on every request.</li>
- *   <li>Weather cache: location → {@link WeatherForecast} (TTL = {@code weatherCacheTtl}).</li>
+ *   <li>Geocoding cache: city name → {@link Location}, with negative entries
+ *       (city not found) cached briefly. Both positive and negative entries
+ *       live behind {@link LocationCache}; positive TTL is long (days),
+ *       negative TTL is short (seconds-to-minutes).</li>
+ *   <li>Weather cache: location → {@link WeatherForecast}. TTL configurable,
+ *       default 12 h.</li>
  * </ol>
  *
  * <p>Flow per request:
  * <ol>
- *   <li>Resolve city → Location. Check geocoding cache first; on miss call
- *       {@link GeocodingProvider} and cache the result.</li>
+ *   <li>Check geocoding cache for a positive entry; if present, use it.</li>
+ *   <li>Check geocoding cache for a negative entry; if present, throw
+ *       {@link LocationNotFoundException} without hitting Nominatim.</li>
+ *   <li>Call Nominatim. On hit, write through to cache. On miss, mark the
+ *       key as absent (short TTL) and throw.</li>
  *   <li>Compute the weather cache key from the resolved Location.</li>
- *   <li>Check weather cache; on hit return immediately.</li>
- *   <li>On miss, fetch from upstream {@link WeatherProvider} and write through.</li>
+ *   <li>Check weather cache; on hit return immediately. On miss, fetch from
+ *       NWS and write through.</li>
  * </ol>
  *
  * <p>This class is plain Java (no Spring annotations). It is instantiated by a
@@ -42,6 +48,7 @@ public class GetWeatherUseCase {
     private final LocationCache locationCache;
     private final Duration weatherCacheTtl;
     private final Duration locationCacheTtl;
+    private final Duration locationAbsentTtl;
 
     public GetWeatherUseCase(
             GeocodingProvider geocodingProvider,
@@ -49,13 +56,15 @@ public class GetWeatherUseCase {
             WeatherCache weatherCache,
             LocationCache locationCache,
             Duration weatherCacheTtl,
-            Duration locationCacheTtl) {
+            Duration locationCacheTtl,
+            Duration locationAbsentTtl) {
         this.geocodingProvider = Objects.requireNonNull(geocodingProvider, "geocodingProvider");
         this.weatherProvider = Objects.requireNonNull(weatherProvider, "weatherProvider");
         this.weatherCache = Objects.requireNonNull(weatherCache, "weatherCache");
         this.locationCache = Objects.requireNonNull(locationCache, "locationCache");
         this.weatherCacheTtl = requirePositive(weatherCacheTtl, "weatherCacheTtl");
         this.locationCacheTtl = requirePositive(locationCacheTtl, "locationCacheTtl");
+        this.locationAbsentTtl = requirePositive(locationAbsentTtl, "locationAbsentTtl");
     }
 
     /**
@@ -71,7 +80,7 @@ public class GetWeatherUseCase {
             throw new IllegalArgumentException("cityName must not be blank");
         }
 
-        // Layer 1: city → location (with cache-aside)
+        // Layer 1: city → location (with cache-aside + negative caching)
         Location location = resolveLocation(cityName);
 
         // Layer 2: location → forecast (with cache-aside)
@@ -87,9 +96,16 @@ public class GetWeatherUseCase {
     }
 
     /**
-     * Resolves a city name to a {@link Location}, consulting the geocoding cache first.
-     * Throws {@link LocationNotFoundException} if the upstream provider returns no match.
-     * On a successful upstream call, the result is written through to the cache.
+     * Resolves a city name to a {@link Location} using cache-aside with
+     * negative caching:
+     * <ol>
+     *   <li>Positive cache hit → return.</li>
+     *   <li>Negative cache hit → throw {@link LocationNotFoundException}
+     *       without an upstream call.</li>
+     *   <li>Cache miss on both → call geocoder. On success, write through
+     *       (positive entry, long TTL). On miss, mark as absent (negative
+     *       entry, short TTL) and throw.</li>
+     * </ol>
      */
     private Location resolveLocation(String cityName) {
         String key = Location.geocodingCacheKey(cityName);
@@ -99,8 +115,15 @@ public class GetWeatherUseCase {
             return cached.get();
         }
 
+        if (locationCache.isAbsent(key)) {
+            throw new LocationNotFoundException(cityName);
+        }
+
         Location fresh = geocodingProvider.findLocation(cityName)
-                .orElseThrow(() -> new LocationNotFoundException(cityName));
+                .orElseThrow(() -> {
+                    locationCache.markAbsent(key, locationAbsentTtl);
+                    return new LocationNotFoundException(cityName);
+                });
 
         locationCache.put(key, fresh, locationCacheTtl);
         return fresh;

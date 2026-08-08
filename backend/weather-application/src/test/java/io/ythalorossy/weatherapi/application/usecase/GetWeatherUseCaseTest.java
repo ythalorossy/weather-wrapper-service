@@ -55,7 +55,7 @@ class GetWeatherUseCaseTest {
         locationCache = mock(LocationCache.class);
         useCase = new GetWeatherUseCase(
                 geocoding, weather, weatherCache, locationCache,
-                Duration.ofHours(12), Duration.ofDays(30));
+                Duration.ofHours(12), Duration.ofDays(30), Duration.ofSeconds(60));
     }
 
     // -- Happy path: cache hit on both layers
@@ -138,15 +138,34 @@ class GetWeatherUseCaseTest {
     // -- City not found (negative path)
 
     @Test
-    void unknownCityThrowsLocationNotFoundAndDoesNotWriteNegativeCache() {
+    void unknownCityThrowsLocationNotFoundAndMarksAbsentCache() {
         when(locationCache.get("geo:nowhereville")).thenReturn(Optional.empty());
+        when(locationCache.isAbsent("geo:nowhereville")).thenReturn(false);
         when(geocoding.findLocation("NowhereVille")).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> useCase.execute("NowhereVille"))
                 .isInstanceOf(LocationNotFoundException.class);
+
+        ArgumentCaptor<Duration> absentTtl = ArgumentCaptor.forClass(Duration.class);
+        verify(locationCache).markAbsent(eq("geo:nowhereville"), absentTtl.capture());
+        assertThat(absentTtl.getValue()).isEqualTo(Duration.ofSeconds(60));
         verify(weather, never()).getForecast(any());
         verify(weatherCache, never()).put(anyString(), any(), any());
         verify(locationCache, never()).put(anyString(), any(), any());
+    }
+
+    @Test
+    void cachedAbsentSkipsGeocoder() {
+        when(locationCache.get("geo:nowhereville")).thenReturn(Optional.empty());
+        when(locationCache.isAbsent("geo:nowhereville")).thenReturn(true);
+
+        assertThatThrownBy(() -> useCase.execute("NowhereVille"))
+                .isInstanceOf(LocationNotFoundException.class);
+
+        verify(geocoding, never()).findLocation(anyString());
+        verify(weather, never()).getForecast(any());
+        verify(locationCache, never()).put(anyString(), any(), any());
+        verify(locationCache, never()).markAbsent(anyString(), any());
     }
 
     // -- Input validation
@@ -170,41 +189,55 @@ class GetWeatherUseCaseTest {
     @Test
     void constructorRejectsNullCollaborators() {
         assertThatThrownBy(() -> new GetWeatherUseCase(null, weather, weatherCache, locationCache,
-                Duration.ofHours(1), Duration.ofDays(1)))
+                Duration.ofHours(1), Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, null, weatherCache, locationCache,
-                Duration.ofHours(1), Duration.ofDays(1)))
+                Duration.ofHours(1), Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, null, locationCache,
-                Duration.ofHours(1), Duration.ofDays(1)))
+                Duration.ofHours(1), Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, null,
-                Duration.ofHours(1), Duration.ofDays(1)))
+                Duration.ofHours(1), Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
-                null, Duration.ofDays(1)))
+                null, Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(NullPointerException.class);
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
-                Duration.ofHours(1), null))
+                Duration.ofHours(1), null, Duration.ofSeconds(60)))
+                .isInstanceOf(NullPointerException.class);
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ofHours(1), Duration.ofDays(1), null))
                 .isInstanceOf(NullPointerException.class);
     }
 
     @Test
     void constructorRejectsNonPositiveWeatherTtl() {
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
-                Duration.ZERO, Duration.ofDays(1)))
+                Duration.ZERO, Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("weatherCacheTtl");
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
-                Duration.ofSeconds(-1), Duration.ofDays(1)))
+                Duration.ofSeconds(-1), Duration.ofDays(1), Duration.ofSeconds(60)))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void constructorRejectsNonPositiveLocationTtl() {
         assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
-                Duration.ofHours(1), Duration.ZERO))
+                Duration.ofHours(1), Duration.ZERO, Duration.ofSeconds(60)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("locationCacheTtl");
+    }
+
+    @Test
+    void constructorRejectsNonPositiveAbsentTtl() {
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ofHours(1), Duration.ofDays(1), Duration.ZERO))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("locationAbsentTtl");
+        assertThatThrownBy(() -> new GetWeatherUseCase(geocoding, weather, weatherCache, locationCache,
+                Duration.ofHours(1), Duration.ofDays(1), Duration.ofSeconds(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }
