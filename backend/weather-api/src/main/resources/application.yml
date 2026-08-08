@@ -39,6 +39,13 @@ weather:
     cache:
       ttl: 720h        # 30 days for positive results
       absent-ttl: 60s  # 60 seconds for negative results ("no such city")
+  rate-limit:
+    burst:
+      capacity: 5
+      refill-period-seconds: 1
+    sustained:
+      capacity: 60
+      refill-period-seconds: 60
 
 logging:
   level:
