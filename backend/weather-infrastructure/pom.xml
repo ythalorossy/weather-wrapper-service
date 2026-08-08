@@ -38,6 +38,15 @@
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
 
+        <!-- Micrometer core API (Counter, Timer, MeterRegistry). The Prometheus
+             registry is in weather-api; the cache + provider adapters only
+             need the core API to register metrics. Spring Boot BOM pins the
+             version (1.13.6 for SB 3.3.5), so no explicit version is needed. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

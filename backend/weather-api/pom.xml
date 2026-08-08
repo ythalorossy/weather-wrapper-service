@@ -46,6 +46,13 @@
             <version>${springdoc-openapi.version}</version>
         </dependency>
 
+        <!-- Prometheus scrape endpoint. Spring Boot's BOM pins the version
+             (1.13.6 for SB 3.3.5), so no explicit version is needed here. -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

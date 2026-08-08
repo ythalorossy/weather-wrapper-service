@@ -1,5 +1,7 @@
 package io.ythalorossy.weatherapi.infrastructure.weather;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import io.ythalorossy.weatherapi.domain.exception.WeatherProviderUnavailableException;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
@@ -25,17 +27,24 @@ import java.util.function.Supplier;
  *
  * <p>Two-step flow: {@code /points/{lat},{lon}} → gridpoint triple,
  * then {@code /gridpoints/{gridId}/{x},{y}/forecast} → forecast periods.
+ *
+ * <p>Exposes a Micrometer timer under {@code weather.provider.nws} with tag
+ * {@code outcome=success|failure}, capturing the wall-clock duration of the
+ * entire two-step call (both NWS requests in series).
  */
 @Component
 public class NwsWeatherProvider implements WeatherProvider {
 
     private static final Logger log = LoggerFactory.getLogger(NwsWeatherProvider.class);
     private static final String SOURCE = "National Weather Service (api.weather.gov)";
+    private static final String TIMER_NAME = "weather.provider.nws";
 
     private final RestClient client;
+    private final MeterRegistry meterRegistry;
 
-    public NwsWeatherProvider(RestClient nwsRestClient) {
+    public NwsWeatherProvider(RestClient nwsRestClient, MeterRegistry meterRegistry) {
         this.client = nwsRestClient;
+        this.meterRegistry = meterRegistry;
     }
 
     @Override
@@ -44,6 +53,18 @@ public class NwsWeatherProvider implements WeatherProvider {
         log.debug("Fetching forecast for {} ({},{})", location.displayName(),
                 location.latitude(), location.longitude());
 
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            WeatherForecast forecast = doFetch(location);
+            sample.stop(meterRegistry.timer(TIMER_NAME, "outcome", "success"));
+            return forecast;
+        } catch (Exception e) {
+            sample.stop(meterRegistry.timer(TIMER_NAME, "outcome", "failure"));
+            throw e;
+        }
+    }
+
+    private WeatherForecast doFetch(Location location) {
         // Step 1: lat/lon → gridpoint
         PointsResponse points = invoke(
                 () -> client.get()

@@ -2,6 +2,8 @@ package io.ythalorossy.weatherapi.infrastructure.cache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import org.slf4j.Logger;
@@ -25,6 +27,11 @@ import java.util.Optional;
  *
  * <p>Same JSON-on-strings pattern as {@link RedisWeatherCache} so all cache
  * types coexist cleanly in a single Redis instance.
+ *
+ * <p>Exposes Micrometer counters under {@code weather.cache.location} with
+ * tag {@code result=hit|miss|negative_hit}. A negative cache hit also
+ * increments {@code miss} (the request did miss the positive cache), so
+ * the hit-ratio is computed as {@code hit / (hit + miss)}.
  */
 @Component
 public class RedisLocationCache implements LocationCache {
@@ -36,10 +43,25 @@ public class RedisLocationCache implements LocationCache {
 
     private final StringRedisTemplate redis;
     private final ObjectMapper mapper;
+    private final Counter hitCounter;
+    private final Counter missCounter;
+    private final Counter negativeHitCounter;
 
-    public RedisLocationCache(StringRedisTemplate redis, ObjectMapper mapper) {
+    public RedisLocationCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meterRegistry) {
         this.redis = redis;
         this.mapper = mapper;
+        this.hitCounter = Counter.builder("weather.cache.location")
+                .description("Geocoding cache lookups by outcome")
+                .tag("result", "hit")
+                .register(meterRegistry);
+        this.missCounter = Counter.builder("weather.cache.location")
+                .description("Geocoding cache lookups by outcome")
+                .tag("result", "miss")
+                .register(meterRegistry);
+        this.negativeHitCounter = Counter.builder("weather.cache.location")
+                .description("Geocoding cache lookups by outcome")
+                .tag("result", "negative_hit")
+                .register(meterRegistry);
     }
 
     @Override
@@ -48,14 +70,18 @@ public class RedisLocationCache implements LocationCache {
         try {
             String json = redis.opsForValue().get(key);
             if (json == null) {
+                missCounter.increment();
                 return Optional.empty();
             }
+            hitCounter.increment();
             return Optional.of(mapper.readValue(json, Location.class));
         } catch (JsonProcessingException e) {
             log.warn("Failed to deserialize cached location at key '{}': {}", key, e.getMessage());
+            missCounter.increment();
             return Optional.empty();
         } catch (Exception e) {
             log.warn("Redis GET failed for location key '{}': {}", key, e.getMessage());
+            missCounter.increment();
             return Optional.empty();
         }
     }
@@ -83,7 +109,11 @@ public class RedisLocationCache implements LocationCache {
         Objects.requireNonNull(key, "key");
         try {
             Boolean exists = redis.hasKey(ABSENT_PREFIX + key);
-            return Boolean.TRUE.equals(exists);
+            if (Boolean.TRUE.equals(exists)) {
+                negativeHitCounter.increment();
+                return true;
+            }
+            return false;
         } catch (Exception e) {
             // Redis down: don't block the request; treat as not-cached-absent
             // so the caller falls through to the geocoder. Degraded but safe.
