@@ -44,3 +44,9 @@ test-output/
 surefire-reports/
 failsafe-reports/
 jacoco.exec
+
+# Isolated worktrees (skill: using-git-worktrees)
+.worktrees/
+
+# Superpowers SDD workspace (skill: subagent-driven-development)
+.superpowers/
