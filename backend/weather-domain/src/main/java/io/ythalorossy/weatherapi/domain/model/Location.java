@@ -41,6 +41,15 @@ public record Location(
     }
 
     /**
+     * Stable cache key for hourly forecast data. Same shape as
+     * {@link #weatherCacheKey()} but under a different namespace so the two
+     * caches don't collide.
+     */
+    public String hourlyCacheKey() {
+        return String.format("hourly:%.2f,%.2f", latitude, longitude);
+    }
+
+    /**
      * Stable cache key for the geocoding lookup, derived from the user-entered
      * city name. Normalization rules:
      * <ul>

@@ -24,8 +24,5 @@ public record SunTimes(
         if (timezoneId.isBlank()) {
             throw new IllegalArgumentException("timezoneId must not be blank");
         }
-        if (!sunrise.toLocalDate().equals(date) && !sunrise.atZone(java.time.ZoneId.of(timezoneId)).toLocalDate().equals(date)) {
-            // sunrise may straddle midnight for high-latitude locations; just warn softly via assertion
-        }
     }
 }
