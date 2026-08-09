@@ -39,13 +39,9 @@ public record LocationMetadataResponse(
                     example = "America/New_York")
             String timezoneId,
 
-            @Schema(description = "URL to the NWS forecast office page (informational).",
+            @Schema(description = "URL to the NWS forecast office page (e.g., https://www.weather.gov/lwx).",
                     example = "https://www.weather.gov/lwx")
-            String forecastOfficeUrl,
-
-            @Schema(description = "URL to the NWS disclaimer.",
-                    example = "https://www.weather.gov/disclaimer")
-            String disclaimerUrl
+            String forecastOfficeUrl
     ) {
         public static OfficeView from(WeatherOffice office) {
             return new OfficeView(
@@ -53,7 +49,6 @@ public record LocationMetadataResponse(
                     office.name(),
                     office.radarStationId(),
                     office.timezoneId(),
-                    office.disclaimerUrl(),
                     office.forecastOfficeUrl()
             );
         }

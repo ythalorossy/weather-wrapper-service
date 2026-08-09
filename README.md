@@ -392,11 +392,35 @@ The full machine-readable spec is served by springdoc-openapi:
 
 ### `GET /api/v1/weather?city={city}`
 
+12-hour-block forecast (5–7 days, day+night periods).
+
 | Status | When                                            | Body                                     |
 |--------|-------------------------------------------------|------------------------------------------|
 | `200`  | Success                                         | `WeatherResponse` (see below)            |
 | `400`  | `city` is missing or blank                      | RFC 9457 `ProblemDetail`                 |
 | `404`  | City not found by Nominatim                     | `ProblemDetail` with `city` property     |
+| `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
+
+### `GET /api/v1/weather/hourly?city={city}`
+
+Fine-grained hourly forecast (up to ~156 hours). Sibling to the daily endpoint above, served from the same NWS gridpoint pipeline but at a finer time resolution.
+
+| Status | When                                            | Body                                     |
+|--------|-------------------------------------------------|------------------------------------------|
+| `200`  | Success                                         | `HourlyWeatherResponse`                  |
+| `400`  | `city` is missing or blank                      | RFC 9457 `ProblemDetail`                 |
+| `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
+| `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
+
+### `GET /api/v1/weather/metadata?city={city}`
+
+NWS Weather Forecast Office (WFO) info for the resolved city: issuing office id, human-readable name, timezone, radar station, and forecast-office page URL. Used by the UI's "Forecast from NWS Baltimore/Washington · Sunrise 6:42, sunset 19:34" strip.
+
+| Status | When                                            | Body                                     |
+|--------|-------------------------------------------------|------------------------------------------|
+| `200`  | Success                                         | `LocationMetadataResponse`               |
+| `400`  | `city` is missing or blank                      | RFC 9457 `ProblemDetail`                 |
+| `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
 | `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
 
 ### Example response

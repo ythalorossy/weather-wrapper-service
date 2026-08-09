@@ -69,7 +69,7 @@ class NwsLocationMetadataProviderTest {
                         .withBody("""
                                 {
                                   "name": "NWS Baltimore/Washington",
-                                  "disclaimerUrl": "https://www.weather.gov/disclaimer"
+                                  "sameAs": "https://www.weather.gov/lwx"
                                 }
                                 """)));
 
@@ -80,8 +80,7 @@ class NwsLocationMetadataProviderTest {
         assertThat(office.name()).isEqualTo("NWS Baltimore/Washington");
         assertThat(office.radarStationId()).isEqualTo("KLWX");
         assertThat(office.timezoneId()).isEqualTo("America/New_York");
-        assertThat(office.disclaimerUrl()).isEqualTo("https://www.weather.gov/disclaimer");
-        assertThat(office.forecastOfficeUrl()).isEqualTo("https://api.weather.gov/offices/LWX");
+        assertThat(office.forecastOfficeUrl()).isEqualTo("https://www.weather.gov/lwx");
     }
 
     @Test

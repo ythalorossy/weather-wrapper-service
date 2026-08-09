@@ -28,8 +28,7 @@ class GetLocationMetadataUseCaseTest {
             "NWS Baltimore/Washington",
             "KLWX",
             "America/New_York",
-            "https://www.weather.gov/lwx",
-            "https://www.weather.gov/disclaimer"
+            "https://www.weather.gov/lwx"
     );
 
     @BeforeEach

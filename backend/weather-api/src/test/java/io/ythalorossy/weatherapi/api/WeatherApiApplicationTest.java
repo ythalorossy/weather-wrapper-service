@@ -288,8 +288,7 @@ class WeatherApiApplicationTest {
             "NWS Baltimore/Washington",
             "KLWX",
             "America/New_York",
-            "https://api.weather.gov/offices/LWX",
-            "https://www.weather.gov/disclaimer"
+            "https://www.weather.gov/lwx"
     );
 
     @Test
@@ -305,7 +304,7 @@ class WeatherApiApplicationTest {
                 .andExpect(jsonPath("$.office.name").value("NWS Baltimore/Washington"))
                 .andExpect(jsonPath("$.office.radarStationId").value("KLWX"))
                 .andExpect(jsonPath("$.office.timezoneId").value("America/New_York"))
-                .andExpect(jsonPath("$.office.disclaimerUrl").value("https://www.weather.gov/disclaimer"));
+                .andExpect(jsonPath("$.office.forecastOfficeUrl").value("https://www.weather.gov/lwx"));
     }
 
     @Test

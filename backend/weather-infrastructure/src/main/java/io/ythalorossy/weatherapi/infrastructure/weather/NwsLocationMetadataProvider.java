@@ -93,19 +93,17 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
                 location
         );
 
-        if (office == null || office.name() == null || office.disclaimerUrl() == null) {
+        if (office == null || office.name() == null || office.sameAs() == null) {
             throw new WeatherProviderUnavailableException(
                     "NWS /offices/" + officeId + " returned empty body for " + location.displayName());
         }
 
-        String forecastOfficeUrl = "https://api.weather.gov" + OFFICE_PATH + officeId;
         return new WeatherOffice(
                 officeId,
                 office.name(),
                 props.radarStation(),
                 props.timeZone(),
-                office.disclaimerUrl(),
-                forecastOfficeUrl
+                office.sameAs()
         );
     }
 

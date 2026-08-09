@@ -5,15 +5,20 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 /**
  * NWS /offices/{officeId} response (internal DTO). Provides the human-readable
- * WFO name and disclaimer URL that we want to surface to clients.
+ * WFO name and the {@code sameAs} URL (the WFO's web page, e.g.,
+ * {@code https://www.weather.gov/lwx}).
  *
- * <p>The full response also includes address, telephone, email, and serving
- * counties; we only need name + disclaimerUrl for now.
- * {@link JsonIgnoreProperties} lets us deserialize without mapping them all.
+ * <p>The full response also includes address, telephone, email, responsible
+ * counties/zones, and approved observation stations; we only need name + the
+ * public page URL for now. {@link JsonIgnoreProperties} lets us deserialize
+ * without mapping them all.
+ *
+ * <p>There is no per-office disclaimer URL on this endpoint — the NWS
+ * disclaimer is a global page ({@code https://www.weather.gov/disclaimer}).
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record OfficeResponse(
         String name,
-        @JsonProperty("disclaimerUrl") String disclaimerUrl
+        @JsonProperty("sameAs") String sameAs
 ) {
 }

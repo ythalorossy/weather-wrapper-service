@@ -14,7 +14,6 @@ public record WeatherOffice(
         String name,
         String radarStationId,
         String timezoneId,
-        String disclaimerUrl,
         String forecastOfficeUrl
 ) {
 
@@ -23,7 +22,6 @@ public record WeatherOffice(
         Objects.requireNonNull(name, "name must not be null");
         Objects.requireNonNull(radarStationId, "radarStationId must not be null");
         Objects.requireNonNull(timezoneId, "timezoneId must not be null");
-        Objects.requireNonNull(disclaimerUrl, "disclaimerUrl must not be null");
         Objects.requireNonNull(forecastOfficeUrl, "forecastOfficeUrl must not be null");
     }
 }
