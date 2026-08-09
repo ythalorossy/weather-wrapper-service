@@ -46,6 +46,9 @@ weather:
     cache:
       ttl: 720h        # 30 days for positive results
       absent-ttl: 60s  # 60 seconds for negative results ("no such city")
+  observations:
+    ttl: 10m          # current conditions: station data refreshes every 5-15 min
+    alert-ttl: 5m     # active alerts: short TTL prevents stale warnings
   rate-limit:
     burst:
       capacity: 5

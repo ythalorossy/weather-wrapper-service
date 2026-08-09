@@ -50,6 +50,14 @@ public record Location(
     }
 
     /**
+     * Stable cache key for current-conditions observations. Same shape as
+     * {@link #weatherCacheKey()} but under a different namespace.
+     */
+    public String observationCacheKey() {
+        return String.format("obs:%.2f,%.2f", latitude, longitude);
+    }
+
+    /**
      * Stable cache key for the geocoding lookup, derived from the user-entered
      * city name. Normalization rules:
      * <ul>

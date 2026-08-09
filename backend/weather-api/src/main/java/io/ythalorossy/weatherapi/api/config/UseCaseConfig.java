@@ -1,14 +1,20 @@
 package io.ythalorossy.weatherapi.api.config;
 
+import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
+import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
+import io.ythalorossy.weatherapi.domain.port.AlertCache;
+import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
+import io.ythalorossy.weatherapi.domain.port.ObservationCache;
+import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import io.ythalorossy.weatherapi.infrastructure.config.WeatherProperties;
@@ -73,5 +79,31 @@ public class UseCaseConfig {
             LocationMetadataProvider metadataProvider,
             LocationResolver locationResolver) {
         return new GetLocationMetadataUseCase(metadataProvider, locationResolver);
+    }
+
+    @Bean
+    public GetCurrentConditionsUseCase getCurrentConditionsUseCase(
+            ObservationProvider observationProvider,
+            ObservationCache observationCache,
+            LocationResolver locationResolver,
+            WeatherProperties properties) {
+        return new GetCurrentConditionsUseCase(
+                observationProvider,
+                observationCache,
+                locationResolver,
+                properties.getObservations().getTtl());
+    }
+
+    @Bean
+    public GetActiveAlertsUseCase getActiveAlertsUseCase(
+            AlertProvider alertProvider,
+            AlertCache alertCache,
+            LocationResolver locationResolver,
+            WeatherProperties properties) {
+        return new GetActiveAlertsUseCase(
+                alertProvider,
+                alertCache,
+                locationResolver,
+                properties.getObservations().getAlertTtl());
     }
 }

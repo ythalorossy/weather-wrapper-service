@@ -14,11 +14,15 @@ import java.time.Duration;
 public class WeatherProperties {
 
     private Cache cache = new Cache();
+    private Observations observations = new Observations();
     private Provider provider = new Provider();
     private Geocoding geocoding = new Geocoding();
 
     public Cache getCache() { return cache; }
     public void setCache(Cache cache) { this.cache = cache; }
+
+    public Observations getObservations() { return observations; }
+    public void setObservations(Observations observations) { this.observations = observations; }
 
     public Provider getProvider() { return provider; }
     public void setProvider(Provider provider) { this.provider = provider; }
@@ -50,6 +54,19 @@ public class WeatherProperties {
 
         public Duration getAbsentTtl() { return absentTtl; }
         public void setAbsentTtl(Duration absentTtl) { this.absentTtl = absentTtl; }
+    }
+
+    public static class Observations {
+        /** Cache TTL for current-conditions observations (live station data). */
+        private Duration ttl = Duration.ofMinutes(10);
+        /** Cache TTL for active weather alerts (short — alerts change fast). */
+        private Duration alertTtl = Duration.ofMinutes(5);
+
+        public Duration getTtl() { return ttl; }
+        public void setTtl(Duration ttl) { this.ttl = ttl; }
+
+        public Duration getAlertTtl() { return alertTtl; }
+        public void setAlertTtl(Duration alertTtl) { this.alertTtl = alertTtl; }
     }
 
     public static class Provider {
