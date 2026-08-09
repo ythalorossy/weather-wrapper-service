@@ -53,8 +53,8 @@ public record LocationMetadataResponse(
                     office.name(),
                     office.radarStationId(),
                     office.timezoneId(),
-                    office.forecastOfficeUrl(),
-                    office.disclaimerUrl()
+                    office.disclaimerUrl(),
+                    office.forecastOfficeUrl()
             );
         }
     }

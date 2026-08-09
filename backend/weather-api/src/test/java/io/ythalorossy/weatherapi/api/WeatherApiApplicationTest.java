@@ -3,11 +3,17 @@ package io.ythalorossy.weatherapi.api;
 import com.redis.testcontainers.RedisContainer;
 import io.ythalorossy.weatherapi.domain.exception.WeatherProviderUnavailableException;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
+import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
+import io.ythalorossy.weatherapi.domain.model.HourlyForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
+import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
+import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
+import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
+import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -80,6 +86,15 @@ class WeatherApiApplicationTest {
     @MockBean
     LocationCache locationCache;
 
+    @MockBean
+    HourlyWeatherProvider hourlyWeatherProvider;
+
+    @MockBean
+    HourlyForecastCache hourlyForecastCache;
+
+    @MockBean
+    LocationMetadataProvider locationMetadataProvider;
+
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";
     private static final String CACHE_KEY = "weather:38.88,-77.09";
@@ -96,6 +111,7 @@ class WeatherApiApplicationTest {
         // Both caches miss by default; tests override as needed.
         when(locationCache.get(anyString())).thenReturn(Optional.empty());
         when(weatherCache.get(anyString())).thenReturn(Optional.empty());
+        when(hourlyForecastCache.get(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -214,6 +230,87 @@ class WeatherApiApplicationTest {
     @Test
     void blankCityParamReturns400() throws Exception {
         mvc.perform(get("/api/v1/weather").param("city", "   "))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ----- Hourly forecast endpoint -----
+
+    private final HourlyForecast hourly = new HourlyForecast(
+            List.of(new HourlyForecastPeriod(
+                    Instant.parse("2026-08-08T19:00:00Z"),
+                    Temperature.fahrenheit(85),
+                    "5 mph", "NW", "Sunny", true)),
+            Instant.parse("2026-08-08T18:30:00Z"),
+            "National Weather Service (api.weather.gov)"
+    );
+
+    @Test
+    void getHourlyForecastReturns200WithFullPayload() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(hourlyWeatherProvider.getHourlyForecast(location)).thenReturn(Optional.of(hourly));
+
+        mvc.perform(get("/api/v1/weather/hourly").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").value(CITY))
+                .andExpect(jsonPath("$.resolvedLocation.latitude").value(38.8816))
+                .andExpect(jsonPath("$.forecast.source").value("National Weather Service (api.weather.gov)"))
+                .andExpect(jsonPath("$.forecast.periods[0].startTime").value("2026-08-08T19:00:00Z"))
+                .andExpect(jsonPath("$.forecast.periods[0].temperature.value").value(85))
+                .andExpect(jsonPath("$.forecast.periods[0].temperature.unit").value("FAHRENHEIT"))
+                .andExpect(jsonPath("$.forecast.periods[0].shortForecast").value("Sunny"))
+                .andExpect(jsonPath("$.forecast.periods[0].daytime").value(true));
+    }
+
+    @Test
+    void getHourlyForecastReturnsHourlyCacheHitWithoutCallingProvider() throws Exception {
+        when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(location));
+        when(weatherCache.get("weather:38.88,-77.09")).thenReturn(Optional.of(forecast));
+        when(hourlyForecastCache.get("hourly:38.88,-77.09")).thenReturn(Optional.of(hourly));
+
+        mvc.perform(get("/api/v1/weather/hourly").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.forecast.periods[0].startTime").value("2026-08-08T19:00:00Z"));
+
+        verify(hourlyWeatherProvider, times(0)).getHourlyForecast(any());
+    }
+
+    @Test
+    void getHourlyForecastBlankCityReturns400() throws Exception {
+        mvc.perform(get("/api/v1/weather/hourly").param("city", "   "))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ----- Location metadata endpoint -----
+
+    private final WeatherOffice office = new WeatherOffice(
+            "LWX",
+            "NWS Baltimore/Washington",
+            "KLWX",
+            "America/New_York",
+            "https://api.weather.gov/offices/LWX",
+            "https://www.weather.gov/disclaimer"
+    );
+
+    @Test
+    void getMetadataReturns200WithOfficeDetails() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(locationMetadataProvider.getOfficeFor(location)).thenReturn(Optional.of(office));
+
+        mvc.perform(get("/api/v1/weather/metadata").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").value(CITY))
+                .andExpect(jsonPath("$.office.officeId").value("LWX"))
+                .andExpect(jsonPath("$.office.name").value("NWS Baltimore/Washington"))
+                .andExpect(jsonPath("$.office.radarStationId").value("KLWX"))
+                .andExpect(jsonPath("$.office.timezoneId").value("America/New_York"))
+                .andExpect(jsonPath("$.office.disclaimerUrl").value("https://www.weather.gov/disclaimer"));
+    }
+
+    @Test
+    void getMetadataBlankCityReturns400() throws Exception {
+        mvc.perform(get("/api/v1/weather/metadata").param("city", "   "))
                 .andExpect(status().isBadRequest());
     }
 }
