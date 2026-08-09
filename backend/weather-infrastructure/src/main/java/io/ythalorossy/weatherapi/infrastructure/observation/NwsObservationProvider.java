@@ -161,8 +161,10 @@ public class NwsObservationProvider implements ObservationProvider {
             throw new WeatherProviderUnavailableException(
                     op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
         } catch (Exception e) {
+            log.warn("NWS call {} failed for {}: {} ({})", op, location.displayName(),
+                    e.getClass().getSimpleName(), e.getMessage(), e);
             throw new WeatherProviderUnavailableException(
-                    "Failed to call " + op + " for " + location.displayName(), e);
+                    "Failed to call " + op + " for " + location.displayName() + ": " + e.getMessage(), e);
         }
     }
 }

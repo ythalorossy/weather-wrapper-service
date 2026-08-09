@@ -423,6 +423,28 @@ NWS Weather Forecast Office (WFO) info for the resolved city: issuing office id,
 | `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
 | `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
 
+### `GET /api/v1/conditions?city={city}`
+
+Current conditions from the nearest NWS observation station. Returns the latest reported values: temperature, dewpoint, wind speed + direction, relative humidity, barometric pressure, free-text description, and the station attribution. 10-minute cache.
+
+| Status | When                                            | Body                                     |
+|--------|-------------------------------------------------|------------------------------------------|
+| `200`  | Success (may have `observation: null` if no station found nearby) | `CurrentConditionsResponse` |
+| `400`  | `city` is missing or blank                      | RFC 9457 `ProblemDetail`                 |
+| `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
+| `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
+
+### `GET /api/v1/alerts?city={city}`
+
+Active NWS weather alerts at the resolved city. Empty list (200, not 404) when no alerts are active. Each alert carries the CAP-IP severity / certainty / urgency / category plus headline, long-form description, recommended instructions, affected area, and validity window. 5-minute cache.
+
+| Status | When                                            | Body                                     |
+|--------|-------------------------------------------------|------------------------------------------|
+| `200`  | Success (alerts list may be empty)              | `AlertsResponse`                          |
+| `400`  | `city` is missing or blank                      | RFC 9457 `ProblemDetail`                 |
+| `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
+| `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
+
 ### Example response
 
 ```json

@@ -19,10 +19,20 @@ public record GridpointStationsResponse(List<Feature> features) {
     public record Properties(
             String stationIdentifier,
             String name,
-            Double latitude,
-            Double longitude,
-            Double elevation,
-            Double distance  // meters from the gridpoint
+            QuantitativeValue latitude,
+            QuantitativeValue longitude,
+            QuantitativeValue elevation,
+            QuantitativeValue distance  // meters from the gridpoint
+    ) {
+    }
+
+    /**
+     * NWS wraps every measurement in a {value, unitCode} object.
+     */
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public record QuantitativeValue(
+            Double value,
+            String unitCode
     ) {
     }
 }
