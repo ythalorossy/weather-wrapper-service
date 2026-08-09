@@ -68,7 +68,7 @@ export default function App() {
           </div>
         )}
 
-        {alerts.data && alerts.data.alerts.length > 0 && (
+        {!!alerts.data?.alerts?.length && (
           <AlertsBanner
             alerts={alerts.data.alerts}
             dismissedIds={dismissedAlertIds}
@@ -82,7 +82,7 @@ export default function App() {
               <p className="text-xs uppercase tracking-wider text-slate-500">Forecast for</p>
               <h2 className="text-xl font-semibold mt-1">{daily.data.city}</h2>
               <p className="text-sm text-slate-500 mt-1">
-                {daily.data.resolvedLocation.displayName}
+                {daily.data.resolvedLocation?.displayName ?? daily.data.city}
               </p>
               {metadata.data && <MetadataBar data={metadata.data} />}
               {metadata.isError && (
@@ -109,7 +109,7 @@ export default function App() {
               />
             )}
 
-            {alerts.data && alerts.data.alerts.length > 0 && (
+            {!!alerts.data?.alerts?.length && (
               <section>
                 <h3 className="text-sm uppercase tracking-wider text-slate-500 mb-2">
                   All active alerts ({alerts.data.alerts.length})
