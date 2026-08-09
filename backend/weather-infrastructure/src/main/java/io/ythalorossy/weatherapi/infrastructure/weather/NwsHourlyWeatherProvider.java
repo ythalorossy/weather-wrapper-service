@@ -1,0 +1,144 @@
+package io.ythalorossy.weatherapi.infrastructure.weather;
+
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import io.ythalorossy.weatherapi.domain.exception.WeatherProviderUnavailableException;
+import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
+import io.ythalorossy.weatherapi.domain.model.HourlyForecastPeriod;
+import io.ythalorossy.weatherapi.domain.model.Location;
+import io.ythalorossy.weatherapi.domain.model.Temperature;
+import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
+import io.ythalorossy.weatherapi.infrastructure.weather.dto.GridpointHourlyForecastResponse;
+import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.RestClient;
+
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Optional;
+import java.util.function.Supplier;
+
+/**
+ * NWS adapter for {@link HourlyWeatherProvider}.
+ *
+ * <p>Two-step flow identical to {@link NwsWeatherProvider}: {@code /points}
+ * → gridpoint triple, then {@code /gridpoints/.../forecast/hourly} → 156
+ * hours of forecast periods.
+ */
+@Component
+public class NwsHourlyWeatherProvider implements HourlyWeatherProvider {
+
+    private static final Logger log = LoggerFactory.getLogger(NwsHourlyWeatherProvider.class);
+    private static final String SOURCE = "National Weather Service (api.weather.gov)";
+    private static final String TIMER_NAME = "weather.provider.nws";
+
+    private final RestClient client;
+    private final MeterRegistry meterRegistry;
+
+    public NwsHourlyWeatherProvider(RestClient nwsRestClient, MeterRegistry meterRegistry) {
+        this.client = nwsRestClient;
+        this.meterRegistry = meterRegistry;
+    }
+
+    @Override
+    public Optional<HourlyForecast> getHourlyForecast(Location location) {
+        Objects.requireNonNull(location, "location");
+        log.debug("Fetching hourly forecast for {} ({},{})", location.displayName(),
+                location.latitude(), location.longitude());
+
+        Timer.Sample sample = Timer.start(meterRegistry);
+        try {
+            HourlyForecast forecast = doFetch(location);
+            sample.stop(meterRegistry.timer(TIMER_NAME, "endpoint", "hourly", "outcome", "success"));
+            return Optional.of(forecast);
+        } catch (Exception e) {
+            sample.stop(meterRegistry.timer(TIMER_NAME, "endpoint", "hourly", "outcome", "failure"));
+            throw e;
+        }
+    }
+
+    private HourlyForecast doFetch(Location location) {
+        // Step 1: lat/lon → gridpoint
+        PointsResponse points = invoke(
+                () -> client.get()
+                        .uri("/points/{lat},{lon}", location.latitude(), location.longitude())
+                        .retrieve()
+                        .body(PointsResponse.class),
+                "NWS /points",
+                location
+        );
+
+        if (points == null || points.properties() == null) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /points returned empty body for " + location.displayName());
+        }
+
+        var props = points.properties();
+        if (props.gridId() == null || props.gridId().isBlank()) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /points returned no gridId for " + location.displayName());
+        }
+
+        // Step 2: hourly forecast from the gridpoint
+        GridpointHourlyForecastResponse forecast = invoke(
+                () -> client.get()
+                        .uri("/gridpoints/{gridId}/{x},{y}/forecast/hourly",
+                                props.gridId(), props.gridX(), props.gridY())
+                        .retrieve()
+                        .body(GridpointHourlyForecastResponse.class),
+                "NWS /forecast/hourly",
+                location
+        );
+
+        if (forecast == null || forecast.properties() == null
+                || forecast.properties().periods() == null
+                || forecast.properties().periods().isEmpty()) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /forecast/hourly returned empty body for " + location.displayName());
+        }
+
+        List<HourlyForecastPeriod> periods = forecast.properties().periods().stream()
+                .map(NwsHourlyWeatherProvider::toDomainPeriod)
+                .toList();
+
+        return HourlyForecast.of(periods, SOURCE);
+    }
+
+    private static HourlyForecastPeriod toDomainPeriod(GridpointHourlyForecastResponse.Period p) {
+        Temperature temp = "C".equalsIgnoreCase(p.temperatureUnit())
+                ? Temperature.celsius(p.temperature())
+                : Temperature.fahrenheit(p.temperature());
+        Instant startTime;
+        try {
+            startTime = Instant.parse(p.startTime());
+        } catch (DateTimeParseException | NullPointerException e) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /forecast/hourly returned unparseable startTime: " + p.startTime(), e);
+        }
+        return new HourlyForecastPeriod(
+                startTime,
+                temp,
+                p.windSpeed(),
+                p.windDirection(),
+                p.shortForecast(),
+                p.isDaytime()
+        );
+    }
+
+    private static <T> T invoke(Supplier<T> call, String op, Location location) {
+        try {
+            return call.get();
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            throw new WeatherProviderUnavailableException(
+                    op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
+        } catch (Exception e) {
+            throw new WeatherProviderUnavailableException(
+                    "Failed to call " + op + " for " + location.displayName(), e);
+        }
+    }
+}
