@@ -2,18 +2,28 @@ package io.ythalorossy.weatherapi.api;
 
 import com.redis.testcontainers.RedisContainer;
 import io.ythalorossy.weatherapi.domain.exception.WeatherProviderUnavailableException;
+import io.ythalorossy.weatherapi.domain.model.AlertCategory;
+import io.ythalorossy.weatherapi.domain.model.AlertCertainty;
+import io.ythalorossy.weatherapi.domain.model.AlertSeverity;
+import io.ythalorossy.weatherapi.domain.model.AlertUrgency;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
+import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
+import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
+import io.ythalorossy.weatherapi.domain.port.AlertCache;
+import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
+import io.ythalorossy.weatherapi.domain.port.ObservationCache;
+import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -95,6 +105,18 @@ class WeatherApiApplicationTest {
     @MockBean
     LocationMetadataProvider locationMetadataProvider;
 
+    @MockBean
+    ObservationProvider observationProvider;
+
+    @MockBean
+    ObservationCache observationCache;
+
+    @MockBean
+    AlertProvider alertProvider;
+
+    @MockBean
+    AlertCache alertCache;
+
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";
     private static final String CACHE_KEY = "weather:38.88,-77.09";
@@ -112,6 +134,8 @@ class WeatherApiApplicationTest {
         when(locationCache.get(anyString())).thenReturn(Optional.empty());
         when(weatherCache.get(anyString())).thenReturn(Optional.empty());
         when(hourlyForecastCache.get(anyString())).thenReturn(Optional.empty());
+        when(observationCache.get(anyString())).thenReturn(Optional.empty());
+        when(alertCache.get(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -310,6 +334,92 @@ class WeatherApiApplicationTest {
     @Test
     void getMetadataBlankCityReturns400() throws Exception {
         mvc.perform(get("/api/v1/weather/metadata").param("city", "   "))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ----- Conditions endpoint -----
+
+    private final Observation observation = new Observation(
+            "KIAD",
+            "Washington/Dulles International Airport, VA",
+            Instant.parse("2026-08-08T21:35:00Z"),
+            78.4, 71.6, 5.2, 315, "NW", 83.5, 30.02, "Cloudy"
+    );
+
+    @Test
+    void getConditionsReturns200WithObservation() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(observationProvider.getCurrentObservation(location)).thenReturn(Optional.of(observation));
+
+        mvc.perform(get("/api/v1/conditions").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").value(CITY))
+                .andExpect(jsonPath("$.resolvedLocation.latitude").value(38.8816))
+                .andExpect(jsonPath("$.observation.stationId").value("KIAD"))
+                .andExpect(jsonPath("$.observation.stationName").value(
+                        "Washington/Dulles International Airport, VA"))
+                .andExpect(jsonPath("$.observation.temperatureFahrenheit").value(78.4))
+                .andExpect(jsonPath("$.observation.windSpeedMph").value(5.2))
+                .andExpect(jsonPath("$.observation.windDirectionCompass").value("NW"))
+                .andExpect(jsonPath("$.observation.textDescription").value("Cloudy"));
+    }
+
+    @Test
+    void getConditionsBlankCityReturns400() throws Exception {
+        mvc.perform(get("/api/v1/conditions").param("city", "   "))
+                .andExpect(status().isBadRequest());
+    }
+
+    // ----- Alerts endpoint -----
+
+    private final WeatherAlert alert = new WeatherAlert(
+            "urn:oid:2.49.0.1.test1",
+            "Severe Thunderstorm Warning",
+            AlertSeverity.Severe,
+            AlertCertainty.Likely,
+            AlertUrgency.Expected,
+            AlertCategory.Met,
+            "Severe Thunderstorm Warning issued August 8",
+            "Long description...",
+            "Take shelter.",
+            "Arlington County",
+            Instant.parse("2026-08-08T21:53:00-04:00"),
+            Instant.parse("2026-08-08T21:53:00-04:00"),
+            Instant.parse("2026-08-08T22:30:00-04:00"),
+            "https://example.com"
+    );
+
+    @Test
+    void getAlertsReturns200WithAlertsList() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(alertProvider.getActiveAlerts(location)).thenReturn(List.of(alert));
+
+        mvc.perform(get("/api/v1/alerts").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.city").value(CITY))
+                .andExpect(jsonPath("$.alerts").isArray())
+                .andExpect(jsonPath("$.alerts[0].event").value("Severe Thunderstorm Warning"))
+                .andExpect(jsonPath("$.alerts[0].severity").value("Severe"))
+                .andExpect(jsonPath("$.alerts[0].areaDesc").value("Arlington County"));
+    }
+
+    @Test
+    void getAlertsReturns200WithEmptyListWhenNoActiveAlerts() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(alertProvider.getActiveAlerts(location)).thenReturn(List.of());
+
+        mvc.perform(get("/api/v1/alerts").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alerts").isArray())
+                .andExpect(jsonPath("$.alerts.length()").value(0));
+    }
+
+    @Test
+    void getAlertsBlankCityReturns400() throws Exception {
+        mvc.perform(get("/api/v1/alerts").param("city", "   "))
                 .andExpect(status().isBadRequest());
     }
 }
