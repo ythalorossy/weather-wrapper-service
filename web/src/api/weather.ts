@@ -74,6 +74,65 @@ export type LocationMetadataResponse = {
   };
 };
 
+// ----- /api/v1/conditions -----
+
+export type CurrentConditionsResponse = {
+  city: string;
+  resolvedLocation: ResolvedLocation;
+  observation: Observation | null;
+};
+
+export type Observation = {
+  stationId: string;
+  stationName: string;
+  timestamp: string;
+  timestampLocal: string | null;
+  temperatureFahrenheit: number | null;
+  dewpointFahrenheit: number | null;
+  windSpeedMph: number | null;
+  windDirectionDegrees: number | null;
+  windDirectionCompass: string | null;
+  relativeHumidityPercent: number | null;
+  barometricPressureInHg: number | null;
+  textDescription: string | null;
+};
+
+// ----- /api/v1/alerts -----
+
+export type AlertsResponse = {
+  city: string;
+  resolvedLocation: ResolvedLocation;
+  alerts: WeatherAlert[];
+};
+
+export type WeatherAlert = {
+  id: string;
+  event: string;
+  severity: 'Extreme' | 'Severe' | 'Moderate' | 'Minor' | 'Unknown';
+  certainty: 'Observed' | 'Likely' | 'Possible' | 'Unlikely' | 'Unknown';
+  urgency: 'Immediate' | 'Expected' | 'Future' | 'Past' | 'Unknown';
+  category:
+    | 'Met'
+    | 'Health'
+    | 'Security'
+    | 'Safety'
+    | 'Hydrological'
+    | 'Marine'
+    | 'Fire'
+    | 'Quality'
+    | 'Aviation'
+    | 'Law'
+    | 'Unknown';
+  headline: string;
+  description: string;
+  instruction: string | null;
+  areaDesc: string;
+  sent: string;
+  effective: string;
+  expires: string;
+  webUrl: string | null;
+};
+
 export class WeatherError extends Error {
   readonly status: number;
   readonly problem?: { title?: string; detail?: string };
@@ -126,4 +185,14 @@ export async function fetchLocationMetadata(city: string): Promise<LocationMetad
   return fetchJson<LocationMetadataResponse>(
     `/api/v1/weather/metadata?city=${encodeURIComponent(city)}`,
   );
+}
+
+export async function fetchCurrentConditions(city: string): Promise<CurrentConditionsResponse> {
+  return fetchJson<CurrentConditionsResponse>(
+    `/api/v1/conditions?city=${encodeURIComponent(city)}`,
+  );
+}
+
+export async function fetchAlerts(city: string): Promise<AlertsResponse> {
+  return fetchJson<AlertsResponse>(`/api/v1/alerts?city=${encodeURIComponent(city)}`);
 }
