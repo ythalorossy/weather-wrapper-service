@@ -1,0 +1,14 @@
+# Java Exclusions
+target/
+.gradle/
+build/
+.settings/
+.metadata/
+*.class
+
+# Vite / TypeScript Exclusions
+node_modules/
+dist/
+.vite/
+*.log
+tsconfig.tsbuildinfo
