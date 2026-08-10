@@ -4,8 +4,7 @@ import { useHourlyWeather } from './hooks/useHourlyWeather';
 import { useLocationMetadata } from './hooks/useLocationMetadata';
 import { useCurrentConditions } from './hooks/useCurrentConditions';
 import { useAlerts } from './hooks/useAlerts';
-import { useLastCity } from './hooks/useSavedLocations';
-import { loadLastCity } from './lib/savedLocations';
+import { loadLastCity, saveLastCity } from './lib/savedLocations';
 import { SearchForm } from './components/SearchForm';
 import { SavedLocationsPills } from './components/SavedLocationsPills';
 import { SaveLocationButton } from './components/SaveLocationButton';
@@ -15,21 +14,24 @@ import { CurrentConditionsCard } from './components/CurrentConditionsCard';
 import { AlertsBanner } from './components/AlertsBanner';
 import { AlertList } from './components/AlertList';
 
+const LAST_CITY_KEY = 'weather-wrapper-service:last-city:v1';
+
 export default function App() {
   const [city, setCity] = useState<string | null>(() => loadLastCity());
-  const { lastCity } = useLastCity();
-  // Re-hydrate `city` if a different value appeared in storage (e.g. another tab).
+  // Sync `city` from another tab's localStorage change (storage events don't
+  // fire in the same tab, so this only reacts to external writes).
   useEffect(() => {
-    if (lastCity !== null && lastCity !== city) {
-      setCity(lastCity);
+    function onStorage(e: StorageEvent) {
+      if (e.key === null || e.key === LAST_CITY_KEY) {
+        setCity(loadLastCity());
+      }
     }
-  }, [lastCity, city]);
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
   // Persist `city` whenever it changes (skip null = clear).
   useEffect(() => {
-    if (city !== null) {
-      // Lazy import to avoid circular dep at module load.
-      import('./lib/savedLocations').then(({ saveLastCity }) => saveLastCity(city));
-    }
+    saveLastCity(city);
   }, [city]);
 
   const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(() => new Set());

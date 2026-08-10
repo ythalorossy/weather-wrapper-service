@@ -1,4 +1,4 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useState, useEffect } from 'react';
 
 interface Props {
   onSubmit: (city: string) => void;
@@ -8,6 +8,10 @@ interface Props {
 
 export function SearchForm({ onSubmit, isFetching, initialValue }: Props) {
   const [value, setValue] = useState(initialValue);
+
+  useEffect(() => {
+    setValue(initialValue);
+  }, [initialValue]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
