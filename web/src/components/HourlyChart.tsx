@@ -171,7 +171,6 @@ export function HourlyChart({ data, rowRefs, hours = 48, sun }: Props): JSX.Elem
         onEvents={{ click: (p: { dataIndex: number }) => onClickHour(p.dataIndex) }}
         opts={{ renderer: 'svg' }}
         style={{ height: '100%', width: '100%' }}
-        notMerge
         lazyUpdate
       />
     </div>
