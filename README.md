@@ -47,5 +47,4 @@ Full architecture: [docs/architecture.md](docs/architecture.md).
 - [Milestones](docs/milestones.md)
 
 ## License
-
 [MIT](LICENSE) — Copyright (c) 2026 Ythalo Rossy Saldanha Lira.
