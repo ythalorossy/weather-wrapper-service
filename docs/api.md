@@ -41,6 +41,32 @@ NWS Weather Forecast Office (WFO) info for the resolved city: issuing office id,
 | `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
 | `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
 
+## `GET /api/v1/weather/forecast/discussion?city={city}`
+
+Returns the latest Area Forecast Discussion (AFD) issued by the NWS
+Weather Forecast Office for the resolved city. The AFD is a paragraph-style
+forecast narrative produced by the local WFO several times per day.
+
+**Response (`DiscussionResponse`):**
+
+```json
+{
+  "officeId": "LWX",
+  "issuanceTime": "2026-08-10T14:35:00Z",
+  "body": "KLWX AFD\n\n.SHORT TERM...\n\nDry weather through Tuesday."
+}
+```
+
+| Status | Meaning |
+|---|---|
+| 200 | Discussion retrieved. |
+| 400 | `city` is missing or blank. |
+| 404 | City not found, no NWS coverage, or no AFD available for this office. |
+| 502 | NWS unreachable. |
+
+Results are cached server-side per office id for 30 minutes (configurable
+via `weather.afd.ttl`).
+
 ## `GET /api/v1/conditions?city={city}`
 
 Current conditions from the nearest NWS observation station. Returns the latest reported values: temperature, dewpoint, wind speed + direction, relative humidity, barometric pressure, free-text description, and the station attribution. 10-minute cache.

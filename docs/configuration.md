@@ -15,6 +15,7 @@ overridden via environment variables (Spring Boot relaxed binding).
 | `weather.geocoding.cache.ttl`  | `720h` (30 days)                   | `WEATHER_GEOCODING_CACHE_TTL` |
 | `weather.geocoding.cache.absent-ttl` | `60s`                        | `WEATHER_GEOCODING_CACHE_ABSENT_TTL` |
 | `weather.sun.cache.ttl`         | `48h`                              | `WEATHER_SUN_CACHE_TTL`        |
+| `weather.afd.ttl`              | `30m`                              | `WEATHER_AFD_TTL`             |
 | `spring.data.redis.host`       | `localhost`                        | `REDIS_HOST`             |
 | `spring.data.redis.port`       | `6379`                             | `REDIS_PORT`             |
 | `server.port`                  | `8080`                             | `SERVER_PORT`            |
