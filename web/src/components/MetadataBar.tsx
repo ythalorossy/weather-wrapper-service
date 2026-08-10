@@ -1,33 +1,33 @@
 import type { LocationMetadataResponse } from '../api/weather';
+import { SunTimesCard } from './SunTimesCard';
 
 interface Props {
   data: LocationMetadataResponse;
 }
 
 /**
- * Small attribution strip beneath the city header:
- *   "Forecast from NWS Baltimore/Washington · KLWX radar"
- *
- * Links out to the NWS forecast office page. Pure presentational.
+ * "Forecast from NWS Baltimore/Washington · KLWX radar · LWX" strip with an
+ * optional sunrise/sunset line beneath. Renders nothing different when
+ * `data.sun` is undefined; the strip just stays short.
  */
 export function MetadataBar({ data }: Props) {
-  const { office } = data;
-
+  const { office, sun } = data;
   return (
-    <p className="text-xs text-slate-500 mt-2">
-      Forecast from{' '}
-      <a
-        href={office.forecastOfficeUrl}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="text-sky-700 hover:text-sky-900 underline-offset-2 hover:underline"
-      >
-        NWS {office.name}
-      </a>
-      {' · '}
-      <span className="text-slate-400">{office.radarStationId} radar</span>
-      {' · '}
-      <span className="text-slate-400">{office.officeId}</span>
-    </p>
+    <div className="mt-2">
+      <p className="text-xs text-slate-500">
+        Forecast from{' '}
+        <a
+          className="underline hover:text-slate-700"
+          href={office.forecastOfficeUrl}
+          target="_blank"
+          rel="noreferrer"
+        >
+          {office.name}
+        </a>
+        {' · '}
+        {office.radarStationId} radar · {office.officeId}
+      </p>
+      {sun && <SunTimesCard sun={sun} />}
+    </div>
   );
 }

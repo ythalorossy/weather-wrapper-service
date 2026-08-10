@@ -40,7 +40,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+import io.ythalorossy.weatherapi.domain.model.SunTimes;
+import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
+import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -117,6 +121,12 @@ class WeatherApiApplicationTest {
     @MockBean
     AlertCache alertCache;
 
+    @MockBean
+    SunTimesProvider sunTimesProvider;
+
+    @MockBean
+    SunTimesCache sunTimesCache;
+
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";
     private static final String CACHE_KEY = "weather:38.88,-77.09";
@@ -136,6 +146,8 @@ class WeatherApiApplicationTest {
         when(hourlyForecastCache.get(anyString())).thenReturn(Optional.empty());
         when(observationCache.get(anyString())).thenReturn(Optional.empty());
         when(alertCache.get(anyString())).thenReturn(Optional.empty());
+        when(sunTimesCache.get(any())).thenReturn(Optional.empty());
+        when(sunTimesProvider.getSunTimes(any(), any())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -319,7 +331,7 @@ class WeatherApiApplicationTest {
     void getMetadataReturns200WithOfficeDetails() throws Exception {
         when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
         when(weatherProvider.getForecast(location)).thenReturn(forecast);
-        when(locationMetadataProvider.getOfficeFor(location)).thenReturn(Optional.of(office));
+        when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
 
         mvc.perform(get("/api/v1/weather/metadata").param("city", CITY))
                 .andExpect(status().isOk())
@@ -421,5 +433,38 @@ class WeatherApiApplicationTest {
     void getAlertsBlankCityReturns400() throws Exception {
         mvc.perform(get("/api/v1/alerts").param("city", "   "))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void metadataIncludesSunViewWhenProviderReturnsSunTimes() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
+        when(sunTimesProvider.getSunTimes(any(), any()))
+                .thenReturn(Optional.of(new SunTimes(
+                        LocalDate.of(2026, 8, 9),
+                        Instant.parse("2026-08-09T10:42:00Z"),
+                        Instant.parse("2026-08-10T00:34:00Z"),
+                        "America/New_York")));
+
+        mvc.perform(get("/api/v1/weather/metadata").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sun").exists())
+                .andExpect(jsonPath("$.sun.date").value("2026-08-09"))
+                .andExpect(jsonPath("$.sun.sunriseLocal").value("06:42"))
+                .andExpect(jsonPath("$.sun.sunsetLocal").value("20:34"))
+                .andExpect(jsonPath("$.sun.dayLengthSeconds").value(49920));
+    }
+
+    @Test
+    void metadataOmitsSunWhenProviderReturnsEmpty() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
+        when(sunTimesProvider.getSunTimes(any(), any())).thenReturn(Optional.empty());
+
+        mvc.perform(get("/api/v1/weather/metadata").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sun").doesNotExist());
     }
 }
