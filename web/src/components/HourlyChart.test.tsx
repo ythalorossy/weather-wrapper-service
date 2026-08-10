@@ -1,8 +1,8 @@
-import { render } from '@testing-library/react';
-import { createRef } from 'react';
-import { describe, expect, it } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { createRef, type RefObject } from 'react';
+import { describe, expect, it, vi } from 'vitest';
 import type { HourlyWeatherResponse, HourlyForecastPeriod, SunView } from '../api/weather';
-import { buildOption, HourlyChart } from './HourlyChart';
+import { buildOption, HourlyChart, onClickHour } from './HourlyChart';
 
 const periods: HourlyForecastPeriod[] = Array.from({ length: 48 }, (_, i) => ({
   startTime: new Date(2026, 7, 9, i).toISOString(),
@@ -63,23 +63,54 @@ describe('buildOption', () => {
   it('adds a markArea for each contiguous daytime run', () => {
     const { option } = buildOption(periods, sun);
     const series = (option.series as Array<{ markArea: { data: unknown[] } }>)[0];
-    // The fixture has two daytime runs (indices 0–11 and 24–35).
     expect(series.markArea.data).toHaveLength(2);
   });
 
   it('returns padded min/max bounds for the aria-label', () => {
     const { minT, maxT } = buildOption(periods);
-    // Smoothed temps span roughly [50, 70]; padding of ~2 on each side.
     expect(minT).toBeLessThan(52);
     expect(maxT).toBeGreaterThan(68);
   });
 });
 
-describe('HourlyChart (stub)', () => {
+describe('HourlyChart', () => {
+  it('renders the chart wrapper with an aria-label', () => {
+    const refs = createRef<(HTMLLIElement | null)[]>();
+    render(<HourlyChart data={data} rowRefs={refs as RefObject<(HTMLLIElement | null)[]>} />);
+    const wrapper = screen.getByTestId('hourly-chart');
+    expect(wrapper).toBeInTheDocument();
+    expect(wrapper).toHaveAttribute('role', 'img');
+    expect(wrapper.getAttribute('aria-label')).toMatch(/Hourly temperature from .+°F to .+°F over 48 hours\./);
+  });
+
   it('renders nothing when there are zero periods', () => {
     const refs = createRef<(HTMLLIElement | null)[]>();
     const empty: HourlyWeatherResponse = { ...data, forecast: { ...data.forecast, periods: [] } };
-    const { container } = render(<HourlyChart data={empty} rowRefs={refs as React.RefObject<(HTMLLIElement | null)[]>} />);
+    const { container } = render(<HourlyChart data={empty} rowRefs={refs as RefObject<(HTMLLIElement | null)[]>} />);
     expect(container.firstChild).toBeNull();
+  });
+
+  it('does not crash when sun is undefined', () => {
+    const refs = createRef<(HTMLLIElement | null)[]>();
+    expect(() =>
+      render(<HourlyChart data={data} rowRefs={refs as RefObject<(HTMLLIElement | null)[]>} />),
+    ).not.toThrow();
+  });
+
+  // Fallback: SVG click dispatch is unreliable in jsdom (document.elementFromPoint unavailable).
+  // Calling the exported onClickHour helper directly.
+  it('clicking hour index 5 scrolls the matching list row into view', () => {
+    const row5 = document.createElement('li');
+    const scrollSpy = vi.fn();
+    row5.scrollIntoView = scrollSpy;
+    const refs = {
+      current: Array.from({ length: 48 }, () => null) as (HTMLLIElement | null)[],
+    } as RefObject<(HTMLLIElement | null)[]>;
+    refs.current![5] = row5;
+
+    render(<HourlyChart data={data} rowRefs={refs} />);
+    onClickHour(refs, 5);
+
+    expect(scrollSpy).toHaveBeenCalled();
   });
 });

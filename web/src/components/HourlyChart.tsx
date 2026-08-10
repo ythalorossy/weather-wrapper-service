@@ -1,6 +1,7 @@
+import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import type { HourlyForecastPeriod, HourlyWeatherResponse, SunView } from '../api/weather';
-import type { RefObject } from 'react';
+import { useMemo, useRef, type JSX, type RefObject } from 'react';
 
 export interface BuildOptionResult {
   option: EChartsOption;
@@ -128,9 +129,60 @@ export interface Props {
 }
 
 /**
- * Stub — Task 3 replaces this with the real ECharts component.
+ * Hourly temperature chart.
+ *
+ * Renders a 48-hour temperature line with sunrise/sunset markers and
+ * daytime band shading when `sun` is provided. Hover reveals a tooltip
+ * (time + temp); click on any hour scrolls the matching list row into
+ * view via `rowRefs`.
  */
-export function HourlyChart({ data }: Props): null {
-  if (data.forecast.periods.length === 0) return null;
-  return null;
+export function HourlyChart({ data, rowRefs, hours = 48, sun }: Props): JSX.Element | null {
+  const periods = data.forecast.periods.slice(0, hours);
+  const chartRef = useRef<ReactECharts>(null);
+
+  const { option, minT, maxT } = useMemo(
+    () => buildOption(periods, sun),
+    [periods, sun],
+  );
+
+  if (periods.length === 0) return null;
+
+  const ariaLabel = `Hourly temperature from ${Math.round(minT)}°F to ${Math.round(maxT)}°F over ${periods.length} hours.`;
+
+  function onClickHour(i: number) {
+    const el = rowRefs.current?.[i];
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('ring-2', 'ring-sky-300');
+      window.setTimeout(() => el.classList.remove('ring-2', 'ring-sky-300'), 1500);
+    }
+  }
+
+  return (
+    <div
+      data-testid="hourly-chart"
+      role="img"
+      aria-label={ariaLabel}
+      className="rounded-2xl border border-slate-200 bg-white shadow-sm p-3 w-full h-40"
+    >
+      <ReactECharts
+        ref={chartRef}
+        option={option}
+        onEvents={{ click: (p: { dataIndex: number }) => onClickHour(p.dataIndex) }}
+        opts={{ renderer: 'svg' }}
+        style={{ height: '100%', width: '100%' }}
+        notMerge
+        lazyUpdate
+      />
+    </div>
+  );
+}
+
+export function onClickHour(rowRefs: RefObject<(HTMLLIElement | null)[]>, i: number): void {
+  const el = rowRefs.current?.[i];
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.add('ring-2', 'ring-sky-300');
+    window.setTimeout(() => el.classList.remove('ring-2', 'ring-sky-300'), 1500);
+  }
 }
