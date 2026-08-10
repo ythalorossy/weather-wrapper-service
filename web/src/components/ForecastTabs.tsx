@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { HourlyWeatherResponse, WeatherResponse } from '../api/weather';
 import { ForecastCard } from './ForecastCard';
 import { HourlyList } from './HourlyList';
+import { HourlyChart } from './HourlyChart';
 
 type Mode = 'daily' | 'hourly';
 
@@ -12,12 +13,12 @@ interface Props {
 
 /**
  * Tabbed container for the two forecast views. Renders the Daily tab by default
- * (matches the pre-M1 single-card layout), with a switch to the Hourly view.
- *
- * Owns its own tab state; the parent doesn't need to know which mode is shown.
+ * with a switch to the Hourly view. The Hourly tab pairs an SVG chart
+ * (click-to-scroll) with the existing tabular list.
  */
 export function ForecastTabs({ daily, hourly }: Props) {
   const [mode, setMode] = useState<Mode>('daily');
+  const rowRefs = useRef<(HTMLLIElement | null)[]>([]);
 
   return (
     <div>
@@ -54,7 +55,12 @@ export function ForecastTabs({ daily, hourly }: Props) {
         {mode === 'daily' ? (
           <ForecastCard data={daily} />
         ) : (
-          <HourlyList data={hourly} />
+          <div className="space-y-3">
+            {hourly.forecast.periods.length > 0 && (
+              <HourlyChart data={hourly} rowRefs={rowRefs} />
+            )}
+            <HourlyList data={hourly} rowRefs={rowRefs} />
+          </div>
         )}
       </div>
     </div>
