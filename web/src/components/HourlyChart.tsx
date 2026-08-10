@@ -103,6 +103,13 @@ function parseLocalDateTime(dateStr: string, timeStr: string): Date {
   return new Date(`${dateStr}T${timeStr}:00`);
 }
 
+function toLocalDateStr(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 function findNearestPeriodIndex(periods: HourlyForecastPeriod[], target: Date): number {
   let nearest = 0;
   let minDiff = Infinity;
@@ -134,6 +141,7 @@ export interface Props {
   rowRefs: RefObject<(HTMLLIElement | null)[]>;
   hours?: number;
   sun?: SunView;
+  today?: boolean;
 }
 
 /**
@@ -144,8 +152,11 @@ export interface Props {
  * (time + temp); click on any hour scrolls the matching list row into
  * view via `rowRefs`.
  */
-export function HourlyChart({ data, rowRefs, hours = 48, sun }: Props): JSX.Element | null {
-  const periods = data.forecast.periods.slice(0, hours);
+export function HourlyChart({ data, rowRefs, hours = 48, sun, today }: Props): JSX.Element | null {
+  const rawPeriods = data.forecast.periods;
+  const periods = today && sun
+    ? rawPeriods.filter((p) => toLocalDateStr(new Date(p.startTime)) === sun.date).slice(0, 24)
+    : rawPeriods.slice(0, hours);
   const chartRef = useRef<ReactECharts>(null);
 
   const { option, minT, maxT } = useMemo(

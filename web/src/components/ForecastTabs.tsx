@@ -74,9 +74,9 @@ export function ForecastTabs({ daily, hourly, city, sun }: Props) {
         ) : mode === 'hourly' ? (
           <div className="space-y-3">
             {hourly.forecast.periods.length > 0 && (
-              <HourlyChart data={hourly} rowRefs={rowRefs} sun={sun} />
+              <HourlyChart data={hourly} rowRefs={rowRefs} sun={sun} today />
             )}
-            <HourlyList data={hourly} rowRefs={rowRefs} />
+            <HourlyList data={hourly} rowRefs={rowRefs} hours={24} />
           </div>
         ) : (
           <DiscussionTab city={city} />
