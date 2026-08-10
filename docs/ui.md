@@ -54,6 +54,7 @@ web/
 | `ForecastTabs` | Daily / Hourly tab switcher |
 | `ForecastCard` | Renders a single forecast period |
 | `HourlyList` | Renders hourly forecast rows |
+| `HourlyChart` | Hand-rolled SVG line chart embedded above the HourlyList. Hover reveals a tooltip; click scrolls the matching list row into view. |
 | `MetadataBar` | WFO name + NWS attribution strip |
 | `CurrentConditionsCard` | Temperature, wind, humidity, pressure |
 | `AlertsBanner` | Most-severe alert with dismiss action |
