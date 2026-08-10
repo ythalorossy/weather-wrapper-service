@@ -32,7 +32,7 @@ Fine-grained hourly forecast (up to ~156 hours). Sibling to the daily endpoint a
 
 ## `GET /api/v1/weather/metadata?city={city}`
 
-NWS Weather Forecast Office (WFO) info for the resolved city: issuing office id, human-readable name, timezone, radar station, and forecast-office page URL. Used by the UI's "Forecast from NWS Baltimore/Washington · Sunrise 6:42, sunset 19:34" strip.
+NWS Weather Forecast Office (WFO) info for the resolved city: issuing office id, human-readable name, timezone, radar station, and forecast-office page URL. Used by the UI's "Forecast from NWS Baltimore/Washington · Sunrise 6:42, sunset 19:34" strip. Sun field is absent (null) on polar edge or if computation failed.
 
 | Status | When                                            | Body                                     |
 |--------|-------------------------------------------------|------------------------------------------|
@@ -72,6 +72,12 @@ Active NWS weather alerts at the resolved city. Empty list (200, not 404) when n
     "latitude": 38.8816,
     "longitude": -77.0910,
     "displayName": "Arlington, Arlington County, Virginia, United States"
+  },
+  "sun": {
+    "date": "2026-08-09",
+    "sunriseLocal": "06:42",
+    "sunsetLocal": "20:34",
+    "dayLengthSeconds": 83520
   },
   "forecast": {
     "generatedAt": "2026-08-07T12:00:00Z",

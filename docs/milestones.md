@@ -41,14 +41,14 @@ enums.
 (most severe alert with dismiss), `AlertList` (all alerts with severity color coding).
 TanStack Query hooks: `useCurrentConditions`, `useAlerts`.
 
-## M3 — Multi-location + chart polish 🟡 Next
+## M3 — Multi-location + chart polish ✅
 
 - **Saved locations:** `localStorage`-backed location list — client-side only, no server
   state changes. "Save this location" button on the forecast header.
 - **Hourly temperature chart:** hand-rolled SVG line chart (no extra dependency) —
   temperature vs. time for the next 24–48 hours. Embedded in the Hourly tab.
-- **Sunrise/sunset wiring:** `SunTimes` domain types exist but are not yet connected to an
-  NWS endpoint; surface them in the UI once wired.
+- **Sunrise/sunset:** `SunTimes` domain types wired to NWS sunrise/sunset endpoint;
+  surfaced in `LocationMetadataResponse` (`sun` field); cached 48 h.
 
 ## M4 — Polish & niche ○ Future
 
