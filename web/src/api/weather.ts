@@ -62,6 +62,13 @@ export type HourlyForecastPeriod = {
   daytime: boolean;
 };
 
+export type SunView = {
+  date: string;             // ISO date "YYYY-MM-DD" in location timezone
+  sunriseLocal: string;     // "HH:mm"
+  sunsetLocal: string;      // "HH:mm"
+  dayLengthSeconds: number;
+};
+
 export type LocationMetadataResponse = {
   city: string;
   resolvedLocation: ResolvedLocation;
@@ -72,6 +79,7 @@ export type LocationMetadataResponse = {
     timezoneId: string;
     forecastOfficeUrl: string;
   };
+  sun?: SunView;
 };
 
 // ----- /api/v1/conditions -----
