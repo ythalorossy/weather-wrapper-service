@@ -41,7 +41,7 @@ NWS Weather Forecast Office (WFO) info for the resolved city: issuing office id,
 | `404`  | City not found by Nominatim                     | `ProblemDetail`                          |
 | `502`  | NWS unreachable or returned a non-success status| `ProblemDetail`                          |
 
-## `GET /api/conditions?city={city}`
+## `GET /api/v1/conditions?city={city}`
 
 Current conditions from the nearest NWS observation station. Returns the latest reported values: temperature, dewpoint, wind speed + direction, relative humidity, barometric pressure, free-text description, and the station attribution. 10-minute cache.
 
