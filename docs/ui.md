@@ -87,3 +87,21 @@ cd web
 npm install
 npm run build    # type-check + production bundle into dist/
 ```
+
+## Saved locations
+
+Users can star a city on the forecast header to add it to a persistent
+list shown as pills above the search form. Clicking a pill switches the
+active city. The last city searched is restored on next visit.
+
+| localStorage key | Value | Purpose |
+|---|---|---|
+| `weather-wrapper-service:saved-cities:v1` | `string[]` (JSON) | The set of saved city strings. |
+| `weather-wrapper-service:last-city:v1` | `string` | The last city searched; restored on mount. |
+
+Components: `SavedLocationsPills` (the row), `SaveLocationButton` (the
+star on the forecast header). Both share state via the
+`useSavedLocations` hook (built on `useSyncExternalStore` + a private
+pub-sub + native `storage` events for cross-tab sync). All `localStorage`
+access is funnelled through `web/src/lib/savedLocations.ts` so the rest
+of the app never reads or writes directly.
