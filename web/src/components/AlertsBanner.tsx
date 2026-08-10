@@ -1,4 +1,5 @@
 import type { WeatherAlert } from '../api/weather';
+import { Glossary } from './Glossary';
 
 interface Props {
   alerts: WeatherAlert[];
@@ -37,13 +38,27 @@ export function AlertsBanner({ alerts, dismissedIds, onDismiss }: Props) {
   const extra = visible.length - 1;
   const styles = SEVERITY_STYLES[top.severity];
 
+  function withGlossary(text: string) {
+    const terms = ['warning', 'watch'] as const;
+    let result: React.ReactNode = text;
+    for (const t of terms) {
+      const re = new RegExp(`\\b${t}\\b`, 'i');
+      if (re.test(result as unknown as string)) {
+        const [before, after] = (result as unknown as string).split(re);
+        result = (<>{before}<Glossary term={t}>{t}</Glossary>{after}</>);
+        break;
+      }
+    }
+    return result;
+  }
+
   return (
     <div
       role="alert"
       className={`rounded-lg border-l-4 ${styles} px-4 py-3 flex items-start gap-3`}
     >
       <div className="flex-1 min-w-0">
-        <p className="font-semibold">{top.event}</p>
+        <p className="font-semibold">{withGlossary(top.event)}</p>
         <p className="text-sm mt-0.5 line-clamp-2">{top.headline}</p>
         {extra > 0 && (
           <p className="text-xs mt-1 opacity-80">
