@@ -39,10 +39,10 @@ export function buildOption(periods: HourlyForecastPeriod[], sun?: SunView): Bui
   };
 
   if (sun) {
-    const sunriseMins = parseLocalTime(sun.sunriseLocal);
-    const sunsetMins = parseLocalTime(sun.sunsetLocal);
-    const sunriseIdx = clamp(Math.round((sunriseMins / 60 / 24) * (periods.length - 1)), 0, periods.length - 1);
-    const sunsetIdx = clamp(Math.round((sunsetMins / 60 / 24) * (periods.length - 1)), 0, periods.length - 1);
+    const sunriseDate = parseLocalDateTime(sun.date, sun.sunriseLocal);
+    const sunsetDate = parseLocalDateTime(sun.date, sun.sunsetLocal);
+    const sunriseIdx = findNearestPeriodIndex(periods, sunriseDate);
+    const sunsetIdx = findNearestPeriodIndex(periods, sunsetDate);
 
     series.markLine = {
       symbol: 'none',
@@ -99,13 +99,21 @@ export function buildOption(periods: HourlyForecastPeriod[], sun?: SunView): Bui
   return { option, minT, maxT };
 }
 
-function parseLocalTime(time: string): number {
-  const [h, m] = time.split(':').map(Number);
-  return h * 60 + m;
+function parseLocalDateTime(dateStr: string, timeStr: string): Date {
+  return new Date(`${dateStr}T${timeStr}:00`);
 }
 
-function clamp(n: number, lo: number, hi: number): number {
-  return Math.max(lo, Math.min(hi, n));
+function findNearestPeriodIndex(periods: HourlyForecastPeriod[], target: Date): number {
+  let nearest = 0;
+  let minDiff = Infinity;
+  periods.forEach((p, i) => {
+    const diff = Math.abs(new Date(p.startTime).getTime() - target.getTime());
+    if (diff < minDiff) {
+      minDiff = diff;
+      nearest = i;
+    }
+  });
+  return nearest;
 }
 
 function contiguousDaytimeRuns(periods: HourlyForecastPeriod[]): Array<[number, number]> {
