@@ -7,9 +7,11 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import io.ythalorossy.weatherapi.api.dto.DiscussionResponse;
 import io.ythalorossy.weatherapi.api.dto.HourlyWeatherResponse;
 import io.ythalorossy.weatherapi.api.dto.LocationMetadataResponse;
 import io.ythalorossy.weatherapi.api.dto.WeatherResponse;
+import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
@@ -38,14 +40,17 @@ public class WeatherController {
     private final GetWeatherUseCase getWeather;
     private final GetHourlyForecastUseCase getHourlyWeather;
     private final GetLocationMetadataUseCase getLocationMetadata;
+    private final GetAfdUseCase getAfd;
 
     public WeatherController(
             GetWeatherUseCase getWeather,
             GetHourlyForecastUseCase getHourlyWeather,
-            GetLocationMetadataUseCase getLocationMetadata) {
+            GetLocationMetadataUseCase getLocationMetadata,
+            GetAfdUseCase getAfd) {
         this.getWeather = getWeather;
         this.getHourlyWeather = getHourlyWeather;
         this.getLocationMetadata = getLocationMetadata;
+        this.getAfd = getAfd;
     }
 
     @GetMapping
@@ -140,6 +145,37 @@ public class WeatherController {
         io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta =
                 getLocationMetadata.execute(city);
         return ResponseEntity.ok(toMetadataResponse(city, result, meta));
+    }
+
+    @GetMapping("/forecast/discussion")
+    @Operation(
+            summary = "Get the latest Area Forecast Discussion (AFD) for a city's WFO",
+            description = """
+                    Resolves the city to its NWS Weather Forecast Office, then returns \
+                    the latest Area Forecast Discussion text issued by that office. \
+                    AFDs are issued several times per day and are cached server-side \
+                    for 30 minutes.""")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200",
+                    description = "Discussion retrieved.",
+                    content = @Content(schema = @Schema(implementation = DiscussionResponse.class))),
+            @ApiResponse(responseCode = "400",
+                    description = "city is missing or blank.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "404",
+                    description = "City not found, no NWS coverage, or no AFD available.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class))),
+            @ApiResponse(responseCode = "502",
+                    description = "NWS unreachable.",
+                    content = @Content(schema = @Schema(implementation = ProblemDetail.class)))
+    })
+    public ResponseEntity<DiscussionResponse> getDiscussion(
+            @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
+                    example = "Arlington, VA", required = true)
+            @RequestParam("city") @NotBlank String city) {
+        return getAfd.execute(city)
+                .map(p -> ResponseEntity.ok(DiscussionResponse.from(p)))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     private static WeatherResponse toResponse(String requestedCity, WeatherQueryResult result) {

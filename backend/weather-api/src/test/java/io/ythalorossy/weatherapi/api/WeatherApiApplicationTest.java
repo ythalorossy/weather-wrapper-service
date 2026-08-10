@@ -6,6 +6,7 @@ import io.ythalorossy.weatherapi.domain.model.AlertCategory;
 import io.ythalorossy.weatherapi.domain.model.AlertCertainty;
 import io.ythalorossy.weatherapi.domain.model.AlertSeverity;
 import io.ythalorossy.weatherapi.domain.model.AlertUrgency;
+import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecastPeriod;
@@ -17,6 +18,8 @@ import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
 import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
+import io.ythalorossy.weatherapi.domain.port.AfdCache;
+import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
@@ -127,6 +130,12 @@ class WeatherApiApplicationTest {
     @MockBean
     SunTimesCache sunTimesCache;
 
+    @MockBean
+    AreaForecastDiscussionProvider afdProvider;
+
+    @MockBean
+    AfdCache afdCache;
+
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";
     private static final String CACHE_KEY = "weather:38.88,-77.09";
@@ -148,6 +157,8 @@ class WeatherApiApplicationTest {
         when(alertCache.get(anyString())).thenReturn(Optional.empty());
         when(sunTimesCache.get(any())).thenReturn(Optional.empty());
         when(sunTimesProvider.getSunTimes(any(), any())).thenReturn(Optional.empty());
+        when(afdProvider.getLatest(anyString())).thenReturn(Optional.empty());
+        when(afdCache.get(anyString())).thenReturn(Optional.empty());
     }
 
     @Test
@@ -466,5 +477,42 @@ class WeatherApiApplicationTest {
         mvc.perform(get("/api/v1/weather/metadata").param("city", CITY))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.sun").doesNotExist());
+    }
+
+    // ----- Discussion endpoint -----
+
+    @Test
+    void discussionReturnsBodyForKnownCity() throws Exception {
+        AfdProduct product = new AfdProduct(
+                "LWX",
+                Instant.parse("2026-08-10T14:35:00Z"),
+                "KLWX AFD\n\n.SHORT TERM...\n\nDry weather through Tuesday.");
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
+        when(afdProvider.getLatest("LWX")).thenReturn(Optional.of(product));
+
+        mvc.perform(get("/api/v1/weather/forecast/discussion").param("city", CITY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.officeId").value("LWX"))
+                .andExpect(jsonPath("$.issuanceTime").value("2026-08-10T14:35:00Z"))
+                .andExpect(jsonPath("$.body").value(org.hamcrest.Matchers.containsString("Dry weather")));
+    }
+
+    @Test
+    void discussionReturns404WhenProviderReturnsEmpty() throws Exception {
+        when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
+        when(weatherProvider.getForecast(location)).thenReturn(forecast);
+        when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
+        when(afdProvider.getLatest("LWX")).thenReturn(Optional.empty());
+
+        mvc.perform(get("/api/v1/weather/forecast/discussion").param("city", CITY))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void discussionReturns404WhenCityMissing() throws Exception {
+        mvc.perform(get("/api/v1/weather/forecast/discussion").param("city", "  "))
+                .andExpect(status().isBadRequest());
     }
 }
