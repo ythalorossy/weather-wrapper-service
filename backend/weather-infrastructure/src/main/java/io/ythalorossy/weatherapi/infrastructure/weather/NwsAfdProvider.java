@@ -2,7 +2,6 @@ package io.ythalorossy.weatherapi.infrastructure.weather;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.ythalorossy.weatherapi.domain.model.AfdProduct;
@@ -14,7 +13,6 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -34,12 +32,10 @@ public class NwsAfdProvider implements AreaForecastDiscussionProvider {
     private static final String TIMER_NAME = "weather.provider.afd";
 
     private final RestClient client;
-    private final ObjectMapper mapper;
     private final MeterRegistry meterRegistry;
 
-    public NwsAfdProvider(RestClient nwsRestClient, ObjectMapper mapper, MeterRegistry meterRegistry) {
+    public NwsAfdProvider(RestClient nwsRestClient, MeterRegistry meterRegistry) {
         this.client = nwsRestClient;
-        this.mapper = mapper;
         this.meterRegistry = meterRegistry;
     }
 
