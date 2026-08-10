@@ -19,8 +19,8 @@ public record GridpointStationsResponse(List<Feature> features) {
     public record Properties(
             String stationIdentifier,
             String name,
-            QuantitativeValue latitude,
-            QuantitativeValue longitude,
+            Double latitude,
+            Double longitude,
             QuantitativeValue elevation,
             QuantitativeValue distance  // meters from the gridpoint
     ) {

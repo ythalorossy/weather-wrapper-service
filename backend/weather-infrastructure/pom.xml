@@ -33,6 +33,14 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
         </dependency>
+        <!-- Apache HttpClient 5 — required by HttpComponentsClientHttpRequestFactory
+             used in RestClientConfig so RestClient follows 3xx redirects (NWS
+             returns 301 to canonicalize coordinate precision). Version managed
+             by Spring Boot BOM. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
