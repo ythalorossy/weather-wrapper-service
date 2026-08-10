@@ -4,6 +4,7 @@ import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
+import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
 import io.ythalorossy.weatherapi.domain.port.AlertCache;
@@ -13,6 +14,8 @@ import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
+import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
+import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherCache;
@@ -75,10 +78,25 @@ public class UseCaseConfig {
     }
 
     @Bean
+    public GetSunTimesUseCase getSunTimesUseCase(
+            SunTimesProvider sunTimesProvider,
+            SunTimesCache sunTimesCache,
+            LocationResolver locationResolver,
+            WeatherProperties properties) {
+        return new GetSunTimesUseCase(
+                sunTimesProvider,
+                sunTimesCache,
+                locationResolver,
+                properties.getSun().getTtl()
+        );
+    }
+
+    @Bean
     public GetLocationMetadataUseCase getLocationMetadataUseCase(
             LocationMetadataProvider metadataProvider,
+            GetSunTimesUseCase getSunTimes,
             LocationResolver locationResolver) {
-        return new GetLocationMetadataUseCase(metadataProvider, locationResolver);
+        return new GetLocationMetadataUseCase(metadataProvider, getSunTimes, locationResolver);
     }
 
     @Bean

@@ -17,6 +17,7 @@ public class WeatherProperties {
     private Observations observations = new Observations();
     private Provider provider = new Provider();
     private Geocoding geocoding = new Geocoding();
+    private Sun sun = new Sun();
 
     public Cache getCache() { return cache; }
     public void setCache(Cache cache) { this.cache = cache; }
@@ -29,6 +30,9 @@ public class WeatherProperties {
 
     public Geocoding getGeocoding() { return geocoding; }
     public void setGeocoding(Geocoding geocoding) { this.geocoding = geocoding; }
+
+    public Sun getSun() { return sun; }
+    public void setSun(Sun sun) { this.sun = sun; }
 
     public static class Cache {
         private Duration ttl = Duration.ofHours(12);
@@ -101,5 +105,13 @@ public class WeatherProperties {
 
         public Cache getCache() { return cache; }
         public void setCache(Cache cache) { this.cache = cache; }
+    }
+
+    public static class Sun {
+        /** Cache TTL for sunrise/sunset data; date-keyed so 48h covers a day rollover. */
+        private Duration ttl = Duration.ofHours(48);
+
+        public Duration getTtl() { return ttl; }
+        public void setTtl(Duration ttl) { this.ttl = ttl; }
     }
 }
