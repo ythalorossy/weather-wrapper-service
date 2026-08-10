@@ -120,7 +120,7 @@ export default function App() {
             )}
 
             {hourly.data ? (
-              <ForecastTabs daily={daily.data} hourly={hourly.data} sun={metadata.data?.sun ?? undefined} />
+              <ForecastTabs daily={daily.data} hourly={hourly.data} city={daily.data.city} sun={metadata.data?.sun ?? undefined} />
             ) : (
               <ForecastTabs
                 daily={daily.data}
@@ -129,6 +129,7 @@ export default function App() {
                   resolvedLocation: daily.data.resolvedLocation,
                   forecast: { generatedAt: '', source: '', periods: [] },
                 }}
+                city={daily.data.city}
                 sun={metadata.data?.sun ?? undefined}
               />
             )}

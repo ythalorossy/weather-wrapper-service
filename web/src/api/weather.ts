@@ -204,3 +204,15 @@ export async function fetchCurrentConditions(city: string): Promise<CurrentCondi
 export async function fetchAlerts(city: string): Promise<AlertsResponse> {
   return fetchJson<AlertsResponse>(`/api/v1/alerts?city=${encodeURIComponent(city)}`);
 }
+
+export type DiscussionResponse = {
+  officeId: string;
+  issuanceTime: string; // ISO
+  body: string;
+};
+
+export async function fetchDiscussion(city: string): Promise<DiscussionResponse> {
+  return fetchJson<DiscussionResponse>(
+    `/api/v1/weather/forecast/discussion?city=${encodeURIComponent(city)}`,
+  );
+}
