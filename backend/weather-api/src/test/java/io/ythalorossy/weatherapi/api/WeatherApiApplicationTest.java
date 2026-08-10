@@ -488,7 +488,6 @@ class WeatherApiApplicationTest {
                 Instant.parse("2026-08-10T14:35:00Z"),
                 "KLWX AFD\n\n.SHORT TERM...\n\nDry weather through Tuesday.");
         when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
-        when(weatherProvider.getForecast(location)).thenReturn(forecast);
         when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
         when(afdProvider.getLatest("LWX")).thenReturn(Optional.of(product));
 
@@ -502,7 +501,6 @@ class WeatherApiApplicationTest {
     @Test
     void discussionReturns404WhenProviderReturnsEmpty() throws Exception {
         when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
-        when(weatherProvider.getForecast(location)).thenReturn(forecast);
         when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
         when(afdProvider.getLatest("LWX")).thenReturn(Optional.empty());
 
@@ -511,7 +509,7 @@ class WeatherApiApplicationTest {
     }
 
     @Test
-    void discussionReturns404WhenCityMissing() throws Exception {
+    void discussionReturns400WhenCityBlank() throws Exception {
         mvc.perform(get("/api/v1/weather/forecast/discussion").param("city", "  "))
                 .andExpect(status().isBadRequest());
     }

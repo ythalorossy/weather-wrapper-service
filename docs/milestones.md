@@ -5,7 +5,7 @@
 | **M1** — Forecast expansion | ✅ Done | Daily + hourly forecast, WFO metadata, all with Redis cache-aside |
 | **M2** — Observations + alerts | ✅ Done | Current conditions (10 min cache), active alerts (5 min cache), severity colors in UI |
 | **M3** — Multi-location + chart polish | ✅ Done | localStorage saved locations, hand-rolled hourly temperature SVG chart |
-| **M4** — Polish & niche (optional) | ○ Future | Radar station nearby, AFD text, glossary tooltips |
+| **M4** — Polish & niche (optional) | ✅ Done | Radar station link, AFD endpoint + Discussion tab, Glossary tooltips |
 
 ## M1 — Forecast expansion ✅ (2026-08-08)
 
@@ -50,8 +50,8 @@ TanStack Query hooks: `useCurrentConditions`, `useAlerts`.
 - **Sunrise/sunset:** `SunTimes` domain types wired to NWS sunrise/sunset endpoint;
   surfaced in `LocationMetadataResponse` (`sun` field); cached 48 h.
 
-## M4 — Polish & niche ○ Future
+## M4 — Polish & niche ✅
 
-- Radar station nearby (NWS radar station lookup)
-- Area Forecast Discussion (AFD) — raw NWS forecast discussion text
-- Glossary tooltips for weather terms
+- Radar station link
+- AFD endpoint + Discussion tab
+- Glossary tooltips
