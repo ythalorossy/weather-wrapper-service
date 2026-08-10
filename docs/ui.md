@@ -106,3 +106,17 @@ star on the forecast header). Both share state via the
 pub-sub + native `storage` events for cross-tab sync). All `localStorage`
 access is funnelled through `web/src/lib/savedLocations.ts` so the rest
 of the app never reads or writes directly.
+
+## Glossary
+
+Inline tooltip wrapper for ~25 hand-curated weather terms. Wrap any
+token in the UI with `<Glossary term="dBZ">dBZ</Glossary>` and the user
+sees a dotted underline + popover with the definition on hover or focus.
+Unknown terms render as plain text (fail open).
+
+| Data | Source |
+|---|---|
+| `web/src/lib/glossary.json` | Flat object keyed by lowercase term; `{ term, definition }` per entry. |
+
+Components: `Glossary` (the wrapper). Curated terms cover common radar,
+thermodynamic, and NWS alert vocabulary.
