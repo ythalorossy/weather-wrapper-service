@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import type { HourlyWeatherResponse, WeatherResponse } from '../api/weather';
+import type { HourlyWeatherResponse, SunView, WeatherResponse } from '../api/weather';
 import { ForecastCard } from './ForecastCard';
 import { HourlyList } from './HourlyList';
 import { HourlyChart } from './HourlyChart';
@@ -9,6 +9,7 @@ type Mode = 'daily' | 'hourly';
 interface Props {
   daily: WeatherResponse;
   hourly: HourlyWeatherResponse;
+  sun?: SunView;
 }
 
 /**
@@ -16,7 +17,7 @@ interface Props {
  * with a switch to the Hourly view. The Hourly tab pairs an SVG chart
  * (click-to-scroll) with the existing tabular list.
  */
-export function ForecastTabs({ daily, hourly }: Props) {
+export function ForecastTabs({ daily, hourly, sun }: Props) {
   const [mode, setMode] = useState<Mode>('daily');
   const rowRefs = useRef<(HTMLLIElement | null)[]>([]);
 
@@ -57,7 +58,7 @@ export function ForecastTabs({ daily, hourly }: Props) {
         ) : (
           <div className="space-y-3">
             {hourly.forecast.periods.length > 0 && (
-              <HourlyChart data={hourly} rowRefs={rowRefs} />
+              <HourlyChart data={hourly} rowRefs={rowRefs} sun={sun} />
             )}
             <HourlyList data={hourly} rowRefs={rowRefs} />
           </div>
