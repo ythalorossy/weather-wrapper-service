@@ -21,15 +21,17 @@ const ALERT: WeatherAlert = {
 };
 
 describe('AlertsBanner', () => {
-  it('wraps warning in the alert event with a glossary trigger', () => {
+  it('preserves original case when wrapping warning in the alert title', () => {
     render(
       <AlertsBanner alerts={[ALERT]} dismissedIds={new Set()} onDismiss={vi.fn()} />,
     );
 
-    expect(screen.getByRole('button', { name: /^warning$/i })).toBeInTheDocument();
+    const alertTitle = screen.getByRole('alert').querySelector('p.font-semibold')!;
+    expect(alertTitle).toHaveTextContent('Severe Thunderstorm Warning');
+    expect(alertTitle.querySelector('button')).toHaveTextContent('Warning');
   });
 
-  it('wraps watch in the alert event with a glossary trigger', () => {
+  it('preserves original case when wrapping watch in the alert title', () => {
     render(
       <AlertsBanner
         alerts={[{ ...ALERT, event: 'Severe Thunderstorm Watch' }]}
@@ -38,6 +40,8 @@ describe('AlertsBanner', () => {
       />,
     );
 
-    expect(screen.getByRole('button', { name: /^watch$/i })).toBeInTheDocument();
+    const alertTitle = screen.getByRole('alert').querySelector('p.font-semibold')!;
+    expect(alertTitle).toHaveTextContent('Severe Thunderstorm Watch');
+    expect(alertTitle.querySelector('button')).toHaveTextContent('Watch');
   });
 });

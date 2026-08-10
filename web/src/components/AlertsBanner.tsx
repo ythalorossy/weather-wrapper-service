@@ -38,18 +38,19 @@ export function AlertsBanner({ alerts, dismissedIds, onDismiss }: Props) {
   const extra = visible.length - 1;
   const styles = SEVERITY_STYLES[top.severity];
 
-  function withGlossary(text: string) {
-    const terms = ['warning', 'watch'] as const;
-    let result: React.ReactNode = text;
-    for (const t of terms) {
-      const re = new RegExp(`\\b${t}\\b`, 'i');
-      if (re.test(result as unknown as string)) {
-        const [before, after] = (result as unknown as string).split(re);
-        result = (<>{before}<Glossary term={t}>{t}</Glossary>{after}</>);
-        break;
-      }
+  function withGlossary(text: string): React.ReactNode {
+    for (const t of ['warning', 'watch'] as const) {
+      const m = text.match(new RegExp(`\\b${t}\\b`, 'i'));
+      if (!m) continue;
+      return (
+        <>
+          {text.slice(0, m.index!)}
+          <Glossary term={t}>{m[0]}</Glossary>
+          {text.slice(m.index! + m[0].length)}
+        </>
+      );
     }
-    return result;
+    return text;
   }
 
   return (
