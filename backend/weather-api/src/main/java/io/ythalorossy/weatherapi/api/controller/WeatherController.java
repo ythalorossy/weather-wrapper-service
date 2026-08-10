@@ -14,13 +14,12 @@ import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.WeatherQueryResult;
-import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
+
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
@@ -138,9 +137,9 @@ public class WeatherController {
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
         WeatherQueryResult result = getWeather.execute(city);
-        WeatherOffice office = getLocationMetadata.execute(city)
-                .orElseThrow(() -> new LocationNotFoundException(city));
-        return ResponseEntity.ok(toMetadataResponse(city, result, office));
+        io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta =
+                getLocationMetadata.execute(city);
+        return ResponseEntity.ok(toMetadataResponse(city, result, meta));
     }
 
     private static WeatherResponse toResponse(String requestedCity, WeatherQueryResult result) {
@@ -177,12 +176,16 @@ public class WeatherController {
 
     private static LocationMetadataResponse toMetadataResponse(String requestedCity,
                                                               WeatherQueryResult result,
-                                                              WeatherOffice office) {
+                                                              io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta) {
         Location loc = result.location();
+        LocationMetadataResponse.SunView sunView = meta.sunTimes()
+                .map(LocationMetadataResponse.SunView::from)
+                .orElse(null);
         return new LocationMetadataResponse(
                 requestedCity,
                 new WeatherResponse.LocationView(loc.latitude(), loc.longitude(), loc.displayName()),
-                LocationMetadataResponse.OfficeView.from(office)
+                LocationMetadataResponse.OfficeView.from(meta.office()),
+                sunView
         );
     }
 
