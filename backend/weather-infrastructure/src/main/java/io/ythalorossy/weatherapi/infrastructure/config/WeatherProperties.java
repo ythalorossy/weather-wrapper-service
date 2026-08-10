@@ -18,6 +18,7 @@ public class WeatherProperties {
     private Provider provider = new Provider();
     private Geocoding geocoding = new Geocoding();
     private Sun sun = new Sun();
+    private Afd afd = new Afd();
 
     public Cache getCache() { return cache; }
     public void setCache(Cache cache) { this.cache = cache; }
@@ -33,6 +34,9 @@ public class WeatherProperties {
 
     public Sun getSun() { return sun; }
     public void setSun(Sun sun) { this.sun = sun; }
+
+    public Afd getAfd() { return afd; }
+    public void setAfd(Afd afd) { this.afd = afd; }
 
     public static class Cache {
         private Duration ttl = Duration.ofHours(12);
@@ -110,6 +114,14 @@ public class WeatherProperties {
     public static class Sun {
         /** Cache TTL for sunrise/sunset data; date-keyed so 48h covers a day rollover. */
         private Duration ttl = Duration.ofHours(48);
+
+        public Duration getTtl() { return ttl; }
+        public void setTtl(Duration ttl) { this.ttl = ttl; }
+    }
+
+    public static class Afd {
+        /** Cache TTL for AFD products; 30 min default since AFDs are issued several times per day. */
+        private Duration ttl = Duration.ofMinutes(30);
 
         public Duration getTtl() { return ttl; }
         public void setTtl(Duration ttl) { this.ttl = ttl; }

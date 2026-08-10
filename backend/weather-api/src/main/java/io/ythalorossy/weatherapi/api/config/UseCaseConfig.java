@@ -1,14 +1,17 @@
 package io.ythalorossy.weatherapi.api.config;
 
 import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
+import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
+import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
+import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
@@ -123,5 +126,20 @@ public class UseCaseConfig {
                 alertCache,
                 locationResolver,
                 properties.getObservations().getAlertTtl());
+    }
+
+    @Bean
+    public GetAfdUseCase getAfdUseCase(
+            AreaForecastDiscussionProvider afdProvider,
+            AfdCache afdCache,
+            LocationResolver locationResolver,
+            LocationMetadataProvider metadataProvider,
+            WeatherProperties properties) {
+        return new GetAfdUseCase(
+                afdProvider,
+                afdCache,
+                locationResolver,
+                metadataProvider,
+                properties.getAfd().getTtl());
     }
 }

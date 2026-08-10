@@ -49,6 +49,8 @@ weather:
   observations:
     ttl: 10m          # current conditions: station data refreshes every 5-15 min
     alert-ttl: 5m     # active alerts: short TTL prevents stale warnings
+  afd:
+    ttl: 30m          # Area Forecast Discussion; issued several times per day
   rate-limit:
     burst:
       capacity: 5
