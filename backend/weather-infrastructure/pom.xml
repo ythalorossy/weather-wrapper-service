@@ -55,6 +55,13 @@
             <artifactId>micrometer-core</artifactId>
         </dependency>
 
+        <!-- Solar position calculations (sunrise/sunset) for local cache key -->
+        <dependency>
+            <groupId>net.e175.klaus</groupId>
+            <artifactId>solarpositioning</artifactId>
+            <version>${solarpositioning.version}</version>
+        </dependency>
+
         <!-- Tests -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

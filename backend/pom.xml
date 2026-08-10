@@ -36,6 +36,7 @@
         <wiremock.version>3.9.1</wiremock.version>
         <springdoc-openapi.version>2.6.0</springdoc-openapi.version>
         <bucket4j.version>8.14.0</bucket4j.version>
+        <solarpositioning.version>2.0.13</solarpositioning.version>
     </properties>
 
     <dependencyManagement>
