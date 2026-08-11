@@ -1,5 +1,7 @@
 package io.ythalorossy.weatherapi.api.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
@@ -8,24 +10,27 @@ import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
+import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
-import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
-import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
-import io.ythalorossy.weatherapi.domain.port.WeatherCache;
+import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
+import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
+import io.ythalorossy.weatherapi.infrastructure.cache.RedisJsonCache;
 import io.ythalorossy.weatherapi.infrastructure.config.WeatherProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 /**
  * Wires the plain-Java use cases into the Spring container.
@@ -51,9 +56,17 @@ public class UseCaseConfig {
     }
 
     @Bean
+    public Cache<WeatherForecast> weatherCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "weather", WeatherForecast.class, meters);
+    }
+
+    @Bean
     public GetWeatherUseCase getWeatherUseCase(
             WeatherProvider weatherProvider,
-            WeatherCache weatherCache,
+            Cache<WeatherForecast> weatherCache,
             LocationResolver locationResolver,
             WeatherProperties properties) {
         return new GetWeatherUseCase(

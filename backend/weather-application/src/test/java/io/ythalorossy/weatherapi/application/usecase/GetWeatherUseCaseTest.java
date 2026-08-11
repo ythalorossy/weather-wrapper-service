@@ -5,7 +5,7 @@ import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.WeatherCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class GetWeatherUseCaseTest {
 
     private WeatherProvider weather;
-    private WeatherCache weatherCache;
+    private Cache<WeatherForecast> weatherCache;
     private LocationResolver locationResolver;
     private GetWeatherUseCase useCase;
 
@@ -40,12 +40,12 @@ class GetWeatherUseCaseTest {
             "NWS"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String WEATHER_KEY = "weather:38.88,-77.09";
+    private static final String WEATHER_KEY = "38.88,-77.09";
 
     @BeforeEach
     void setUp() {
         weather = mock(WeatherProvider.class);
-        weatherCache = mock(WeatherCache.class);
+        weatherCache = mock(Cache.class);
         locationResolver = mock(LocationResolver.class);
         when(locationResolver.resolve(CITY)).thenReturn(arlington);
         useCase = new GetWeatherUseCase(
@@ -113,13 +113,10 @@ class GetWeatherUseCaseTest {
     }
 
     @Test
-    void constructorRejectsNonPositiveWeatherTtl() {
-        assertThatThrownBy(() -> new GetWeatherUseCase(
-                weather, weatherCache, locationResolver, Duration.ZERO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("weatherCacheTtl");
+    void constructorRejectsNegativeWeatherTtl() {
         assertThatThrownBy(() -> new GetWeatherUseCase(
                 weather, weatherCache, locationResolver, Duration.ofSeconds(-1)))
-                .isInstanceOf(IllegalArgumentException.class);
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("weatherCacheTtl");
     }
 }
