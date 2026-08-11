@@ -18,7 +18,6 @@ import io.ythalorossy.weatherapi.application.usecase.AlertsPayload;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
-import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
@@ -132,7 +131,7 @@ class WeatherApiApplicationTest {
     AreaForecastDiscussionProvider afdProvider;
 
     @MockBean
-    AfdCache afdCache;
+    Cache<AfdProduct> afdCache;
 
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";

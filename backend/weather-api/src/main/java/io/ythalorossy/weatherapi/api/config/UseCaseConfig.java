@@ -11,10 +11,10 @@ import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
+import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
@@ -85,6 +85,14 @@ public class UseCaseConfig {
             ObjectMapper mapper,
             MeterRegistry meters) {
         return new RedisJsonCache<>(redis, mapper, "alerts", AlertsPayload.class, meters);
+    }
+
+    @Bean
+    public Cache<AfdProduct> afdCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "afd", AfdProduct.class, meters);
     }
 
     @Bean
@@ -170,7 +178,7 @@ public class UseCaseConfig {
     @Bean
     public GetAfdUseCase getAfdUseCase(
             AreaForecastDiscussionProvider afdProvider,
-            AfdCache afdCache,
+            Cache<AfdProduct> afdCache,
             LocationResolver locationResolver,
             LocationMetadataProvider metadataProvider,
             WeatherProperties properties) {
