@@ -10,7 +10,12 @@ import java.util.Objects;
  *
  * <p>Sibling to {@link WeatherForecast} (which uses 12-hour blocks); this one
  * carries finer-grained hourly data from the same NWS upstream endpoint.
+ *
+ * <p>Kept as a separate record from {@link WeatherForecast} because
+ * {@link HourlyForecastPeriod} carries {@code startTime} that {@link ForecastPeriod}
+ * does not, and the two period types are not type-compatible.
  */
+// # ponytail: candidates for merge with WeatherForecast; kept split because period-type differs (HourlyForecastPeriod has startTime, ForecastPeriod has name+detailedForecast).
 public record HourlyForecast(
         List<HourlyForecastPeriod> periods,
         Instant generatedAt,
