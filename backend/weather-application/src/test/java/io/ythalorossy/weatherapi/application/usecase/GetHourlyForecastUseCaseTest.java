@@ -42,7 +42,7 @@ class GetHourlyForecastUseCaseTest {
             "NWS"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String HOURLY_KEY = "hourly:38.88,-77.09";
+    private static final String HOURLY_KEY = "hourly:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {

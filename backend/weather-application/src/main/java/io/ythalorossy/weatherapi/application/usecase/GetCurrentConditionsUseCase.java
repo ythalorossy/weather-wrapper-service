@@ -40,7 +40,7 @@ public class GetCurrentConditionsUseCase {
     public Optional<Observation> execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String key = location.observationCacheKey();
+        String key = location.cacheKey("obs");
         Optional<Observation> cached = observationCache.get(key);
         if (cached.isPresent()) return cached;
 

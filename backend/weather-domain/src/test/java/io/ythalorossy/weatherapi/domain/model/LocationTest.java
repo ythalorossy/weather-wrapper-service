@@ -55,16 +55,16 @@ class LocationTest {
     }
 
     @Test
-    void weatherCacheKeyRoundsLatLonToTwoDecimals() {
+    void cacheKeyUsesFourDecimalsAndRounds() {
         Location loc = new Location(38.88162, -77.09103, "Arlington");
-        assertThat(loc.weatherCacheKey()).isEqualTo("weather:38.88,-77.09");
+        assertThat(loc.cacheKey("weather")).isEqualTo("weather:38.8816,-77.0910");
     }
 
     @Test
-    void weatherCacheKeyIsStableForTrivialVariations() {
-        Location a = new Location(38.8816261, -77.0910312, "A");
-        Location b = new Location(38.8814999, -77.0909999, "B");
-        assertThat(a.weatherCacheKey()).isEqualTo(b.weatherCacheKey());
+    void cacheKeyIsStableForTrivialVariations() {
+        Location a = new Location(38.88160001, -77.09100001, "A");
+        Location b = new Location(38.88160002, -77.09100002, "B");
+        assertThat(a.cacheKey("weather")).isEqualTo(b.cacheKey("weather"));
     }
 
     @Test

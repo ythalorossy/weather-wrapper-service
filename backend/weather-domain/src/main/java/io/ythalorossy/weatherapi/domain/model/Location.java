@@ -1,7 +1,6 @@
 package io.ythalorossy.weatherapi.domain.model;
 
 import java.util.Objects;
-import java.util.regex.Pattern;
 
 /**
  * Geographic location value object. Immutable.
@@ -14,9 +13,6 @@ public record Location(
         double longitude,
         String displayName
 ) {
-
-    /** Matches one or more whitespace characters. */
-    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
 
     public Location {
         if (latitude < -90.0 || latitude > 90.0) {
@@ -32,29 +28,12 @@ public record Location(
     }
 
     /**
-     * Stable cache key for weather data derived from this location.
-     * Lat/lon rounded to 2 decimal places (≈ 1.1 km precision) so trivial
-     * floating-point or naming variations don't fragment cache slots.
+     * Stable cache key for this location under the given namespace.
+     * Lat/lon rounded to 4 decimal places so trivial floating-point variations
+     * don't fragment cache slots.
      */
-    public String weatherCacheKey() {
-        return String.format("weather:%.2f,%.2f", latitude, longitude);
-    }
-
-    /**
-     * Stable cache key for hourly forecast data. Same shape as
-     * {@link #weatherCacheKey()} but under a different namespace so the two
-     * caches don't collide.
-     */
-    public String hourlyCacheKey() {
-        return String.format("hourly:%.2f,%.2f", latitude, longitude);
-    }
-
-    /**
-     * Stable cache key for current-conditions observations. Same shape as
-     * {@link #weatherCacheKey()} but under a different namespace.
-     */
-    public String observationCacheKey() {
-        return String.format("obs:%.2f,%.2f", latitude, longitude);
+    public String cacheKey(String namespace) {
+        return namespace + ":%.4f,%.4f".formatted(latitude, longitude);
     }
 
     /**
@@ -73,7 +52,6 @@ public record Location(
      */
     public static String geocodingCacheKey(String cityName) {
         Objects.requireNonNull(cityName, "cityName");
-        String normalized = WHITESPACE.matcher(cityName.trim().toLowerCase()).replaceAll(" ");
-        return "geo:" + normalized;
+        return "geo:" + cityName.trim().toLowerCase().replaceAll("\\s+", " ");
     }
 }

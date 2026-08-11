@@ -12,8 +12,8 @@ import java.util.Objects;
 /**
  * Use case: active weather alerts at a city.
  *
- * <p>Cache key is the resolved lat/lon (e.g., {@code alerts:38.88,-77.09}).
- * 5-minute TTL \u2014 alerts change fast, so a stale "Tornado warning" is a
+ * <p>Cache key is the resolved lat/lon (e.g., {@code alerts:38.8816,-77.0910}).
+ * 5-minute TTL — alerts change fast, so a stale "Tornado warning" is a
  * worse UX than a fresh fetch.
  */
 public class GetActiveAlertsUseCase {
@@ -37,7 +37,7 @@ public class GetActiveAlertsUseCase {
     public List<WeatherAlert> execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String key = "alerts:" + String.format("%.2f,%.2f", location.latitude(), location.longitude());
+        String key = location.cacheKey("alerts");
         var cached = alertCache.get(key);
         if (cached.isPresent()) return cached.get();
 

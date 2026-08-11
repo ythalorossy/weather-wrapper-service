@@ -56,7 +56,7 @@ public class GetWeatherUseCase {
     public WeatherQueryResult execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String weatherKey = location.weatherCacheKey();
+        String weatherKey = location.cacheKey("weather");
         var cachedForecast = weatherCache.get(weatherKey);
         if (cachedForecast.isPresent()) {
             return new WeatherQueryResult(location, cachedForecast.get());

@@ -39,7 +39,7 @@ public class GetSunTimesUseCase {
                 .map(o -> ZoneId.of(o.timezoneId()))
                 .orElse(ZoneId.of("UTC"));
         LocalDate today = LocalDate.now(zone);
-        String key = String.format("sun:%.2f,%.2f:%s", location.latitude(), location.longitude(), today);
+        String key = location.cacheKey("sun") + ":" + today;
 
         Optional<SunTimes> cached = sunTimesCache.get(key);
         if (cached.isPresent()) return cached;

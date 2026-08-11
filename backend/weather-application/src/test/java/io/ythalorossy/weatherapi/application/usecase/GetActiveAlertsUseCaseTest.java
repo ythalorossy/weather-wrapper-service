@@ -53,7 +53,7 @@ class GetActiveAlertsUseCaseTest {
             "https://example.com"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String ALERTS_KEY = "alerts:38.88,-77.09";
+    private static final String ALERTS_KEY = "alerts:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {

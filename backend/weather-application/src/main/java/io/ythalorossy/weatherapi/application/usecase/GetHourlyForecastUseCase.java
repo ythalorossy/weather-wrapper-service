@@ -36,7 +36,7 @@ public class GetHourlyForecastUseCase {
     public HourlyForecast execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String key = location.hourlyCacheKey();
+        String key = location.cacheKey("hourly");
         var cached = hourlyForecastCache.get(key);
         if (cached.isPresent()) {
             return cached.get();

@@ -138,7 +138,7 @@ class WeatherApiApplicationTest {
 
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";
-    private static final String CACHE_KEY = "weather:38.88,-77.09";
+    private static final String CACHE_KEY = "weather:38.8816,-77.0910";
     private final Location location = new Location(38.8816, -77.0910, "Arlington, Arlington County, Virginia, United States");
     private final WeatherForecast forecast = new WeatherForecast(
             List.of(new ForecastPeriod("Today", Temperature.fahrenheit(85), "5 mph", "NW",
@@ -312,8 +312,8 @@ class WeatherApiApplicationTest {
     @Test
     void getHourlyForecastReturnsHourlyCacheHitWithoutCallingProvider() throws Exception {
         when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(location));
-        when(weatherCache.get("weather:38.88,-77.09")).thenReturn(Optional.of(forecast));
-        when(hourlyForecastCache.get("hourly:38.88,-77.09")).thenReturn(Optional.of(hourly));
+        when(weatherCache.get("weather:38.8816,-77.0910")).thenReturn(Optional.of(forecast));
+        when(hourlyForecastCache.get("hourly:38.8816,-77.0910")).thenReturn(Optional.of(hourly));
 
         mvc.perform(get("/api/v1/weather/hourly").param("city", CITY))
                 .andExpect(status().isOk())

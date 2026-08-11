@@ -38,7 +38,7 @@ class GetCurrentConditionsUseCaseTest {
             78.4, 71.6, 5.2, 315, "NW", 83.5, 30.02, "Cloudy"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String OBS_KEY = "obs:38.88,-77.09";
+    private static final String OBS_KEY = "obs:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {

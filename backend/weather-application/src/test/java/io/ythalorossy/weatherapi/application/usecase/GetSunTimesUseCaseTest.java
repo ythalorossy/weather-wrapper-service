@@ -71,7 +71,7 @@ class GetSunTimesUseCaseTest {
 
         ArgumentCaptor<String> keyCap = ArgumentCaptor.forClass(String.class);
         verify(cache).put(keyCap.capture(), eq(sample), eq(TTL));
-        assertThat(keyCap.getValue()).startsWith("sun:38.88,-77.09:");
+        assertThat(keyCap.getValue()).startsWith("sun:38.8816,-77.0910:");
     }
 
     @Test

@@ -40,7 +40,7 @@ class GetWeatherUseCaseTest {
             "NWS"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String WEATHER_KEY = "weather:38.88,-77.09";
+    private static final String WEATHER_KEY = "weather:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {
