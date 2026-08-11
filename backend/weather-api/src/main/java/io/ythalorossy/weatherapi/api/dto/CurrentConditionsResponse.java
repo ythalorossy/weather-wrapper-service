@@ -3,7 +3,6 @@ package io.ythalorossy.weatherapi.api.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 
-import java.time.Instant;
 import java.time.format.DateTimeFormatter;
 
 /**
