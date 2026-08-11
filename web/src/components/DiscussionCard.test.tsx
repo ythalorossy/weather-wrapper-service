@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { DiscussionCard } from './DiscussionCard';
+import { DiscussionCard } from './DiscussionTab';
 
 describe('DiscussionCard', () => {
   it('renders the body in a pre-wrap block with an issued header', () => {

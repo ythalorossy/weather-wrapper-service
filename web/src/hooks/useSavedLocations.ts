@@ -46,11 +46,7 @@ export function useSavedLocations() {
     emit();
   }, []);
 
-  const isSaved = useCallback((city: string) => {
-    return saved.some((existing) => existing.trim().toLowerCase() === city.trim().toLowerCase());
-  }, [saved]);
-
-  void isSavedInStorage;
+  const isSaved = useCallback((city: string) => isSavedInStorage(city), []);
 
   return { saved, add, remove, isSaved };
 }
@@ -61,6 +57,9 @@ export function useLastCity() {
     () => loadLastCity() ?? '',
     () => loadLastCity() ?? '',
   );
-  void saveLastCity;
-  return { lastCity: lastCity || null };
+  const setLastCity = useCallback((city: string | null) => {
+    saveLastCity(city);
+    emit();
+  }, []);
+  return { lastCity: lastCity || null, setLastCity };
 }
