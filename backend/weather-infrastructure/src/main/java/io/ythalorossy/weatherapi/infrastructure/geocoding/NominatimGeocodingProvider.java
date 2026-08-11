@@ -48,13 +48,7 @@ public class NominatimGeocodingProvider implements GeocodingProvider {
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
             NominatimResult[] results = client.get()
-                    .uri(uriBuilder -> uriBuilder
-                            .path("/search")
-                            .queryParam("q", cityName)
-                            .queryParam("format", "json")
-                            .queryParam("limit", 1)
-                            .queryParam("addressdetails", 0)
-                            .build())
+                    .uri("/search?q={q}&format=json&limit=1&addressdetails=0", cityName)
                     .retrieve()
                     .body(NominatimResult[].class);
             sample.stop(meterRegistry.timer(TIMER_NAME, "outcome", "success"));

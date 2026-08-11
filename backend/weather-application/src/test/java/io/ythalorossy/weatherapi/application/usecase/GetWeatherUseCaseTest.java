@@ -59,10 +59,9 @@ class GetWeatherUseCaseTest {
         when(weatherCache.get(WEATHER_KEY))
                 .thenReturn(java.util.Optional.of(forecast));
 
-        WeatherQueryResult result = useCase.execute(CITY);
+        Location location = useCase.execute(CITY);
 
-        assertThat(result.location()).isEqualTo(arlington);
-        assertThat(result.forecast()).isEqualTo(forecast);
+        assertThat(location).isEqualTo(arlington);
         verify(weather, never()).getForecast(any());
         verify(weatherCache, never()).put(anyString(), any(), any());
     }
@@ -74,9 +73,9 @@ class GetWeatherUseCaseTest {
         when(weatherCache.get(WEATHER_KEY)).thenReturn(java.util.Optional.empty());
         when(weather.getForecast(arlington)).thenReturn(forecast);
 
-        WeatherQueryResult result = useCase.execute(CITY);
+        Location location = useCase.execute(CITY);
 
-        assertThat(result.forecast()).isEqualTo(forecast);
+        assertThat(location).isEqualTo(arlington);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
         verify(weatherCache).put(eq(WEATHER_KEY), eq(forecast), ttlCaptor.capture());

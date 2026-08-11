@@ -11,7 +11,6 @@ import io.ythalorossy.weatherapi.api.dto.AlertsResponse;
 import io.ythalorossy.weatherapi.api.dto.WeatherResponse;
 import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
-import io.ythalorossy.weatherapi.application.usecase.WeatherQueryResult;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import jakarta.validation.constraints.NotBlank;
@@ -71,8 +70,7 @@ public class AlertsController {
             @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
-        WeatherQueryResult geo = getWeather.execute(city);
-        Location location = geo.location();
+        Location location = getWeather.execute(city);
         List<WeatherAlert> alerts = getActiveAlerts.execute(city);
 
         List<AlertsResponse.AlertView> views = alerts.stream()

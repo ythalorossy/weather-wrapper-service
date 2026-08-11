@@ -11,7 +11,6 @@ import io.ythalorossy.weatherapi.api.dto.CurrentConditionsResponse;
 import io.ythalorossy.weatherapi.api.dto.WeatherResponse;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
-import io.ythalorossy.weatherapi.application.usecase.WeatherQueryResult;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import jakarta.validation.constraints.NotBlank;
@@ -75,8 +74,7 @@ public class ConditionsController {
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
         // Reuse the resolver-backed daily use case just for the resolved Location.
-        WeatherQueryResult geo = getWeather.execute(city);
-        Location location = geo.location();
+        Location location = getWeather.execute(city);
         Optional<Observation> obs = getCurrentConditions.execute(city);
 
         if (obs.isEmpty()) {

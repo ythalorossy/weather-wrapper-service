@@ -26,6 +26,10 @@ import java.util.Objects;
  * <p>This class is plain Java (no Spring annotations). It is instantiated by a
  * {@code @Configuration} bean in the API module so the application layer stays
  * framework-agnostic.
+ *
+ * <p>Returns just the resolved {@link Location}; the forecast is written
+ * through to the cache but not returned here. Controllers that need it call
+ * the provider again or read the cache themselves.
  */
 public class GetWeatherUseCase {
 
@@ -46,25 +50,24 @@ public class GetWeatherUseCase {
     }
 
     /**
-     * Executes the weather query for the given city name.
+     * Resolves the city and populates the weather cache (cache-aside).
      *
      * @param cityName user-entered city (e.g., "Arlington, VA"); must not be null or blank
-     * @return the resolved location plus the forecast (cached or freshly fetched)
+     * @return the resolved location
      * @throws LocationNotFoundException if the city cannot be resolved to a location
-     * @throws IllegalArgumentException  if {@code cityName} is null or blank
      */
-    public WeatherQueryResult execute(String cityName) {
+    public Location execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
         String weatherKey = location.cacheKey("weather");
         var cachedForecast = weatherCache.get(weatherKey);
         if (cachedForecast.isPresent()) {
-            return new WeatherQueryResult(location, cachedForecast.get());
+            return location;
         }
 
         WeatherForecast forecast = weatherProvider.getForecast(location);
         weatherCache.put(weatherKey, forecast, weatherCacheTtl);
-        return new WeatherQueryResult(location, forecast);
+        return location;
     }
 
     private static Duration requirePositive(Duration ttl, String name) {
