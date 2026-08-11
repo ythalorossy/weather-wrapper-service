@@ -2,8 +2,8 @@ package io.ythalorossy.weatherapi.application.usecase;
 
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
-import io.ythalorossy.weatherapi.domain.port.LocationCache;
 
 import java.time.Duration;
 import java.util.Objects;
@@ -29,19 +29,21 @@ import java.util.Objects;
 public class LocationResolver {
 
     private final GeocodingProvider geocodingProvider;
-    private final LocationCache locationCache;
+    private final Cache<Location> locationCache;
     private final Duration locationCacheTtl;
     private final Duration locationAbsentTtl;
 
     public LocationResolver(
             GeocodingProvider geocodingProvider,
-            LocationCache locationCache,
+            Cache<Location> locationCache,
             Duration locationCacheTtl,
             Duration locationAbsentTtl) {
         this.geocodingProvider = Objects.requireNonNull(geocodingProvider, "geocodingProvider");
         this.locationCache = Objects.requireNonNull(locationCache, "locationCache");
-        this.locationCacheTtl = requirePositive(locationCacheTtl, "locationCacheTtl");
-        this.locationAbsentTtl = requirePositive(locationAbsentTtl, "locationAbsentTtl");
+        CacheAside.requirePositive(locationCacheTtl, "locationCacheTtl");
+        CacheAside.requirePositive(locationAbsentTtl, "locationAbsentTtl");
+        this.locationCacheTtl = locationCacheTtl;
+        this.locationAbsentTtl = locationAbsentTtl;
     }
 
     /**
@@ -72,13 +74,5 @@ public class LocationResolver {
 
         locationCache.put(key, fresh, locationCacheTtl);
         return fresh;
-    }
-
-    private static Duration requirePositive(Duration ttl, String name) {
-        Objects.requireNonNull(ttl, name);
-        if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException(name + " must be positive: " + ttl);
-        }
-        return ttl;
     }
 }

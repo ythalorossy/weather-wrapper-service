@@ -3,7 +3,7 @@ package io.ythalorossy.weatherapi.application.usecase;
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.WeatherCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 
 import java.time.Duration;
@@ -17,8 +17,8 @@ import java.util.Objects;
  * <ol>
  *   <li>Geocoding cache: city name → {@link Location}, with negative entries
  *       (city not found) cached briefly. Both positive and negative entries
- *       live behind {@code LocationCache}; positive TTL is long (days),
- *       negative TTL is short (seconds-to-minutes).</li>
+ *       live behind the shared {@link LocationResolver}; positive TTL is long
+ *       (days), negative TTL is short (seconds-to-minutes).</li>
  *   <li>Weather cache: location → {@link WeatherForecast}. TTL configurable,
  *       default 12 h.</li>
  * </ol>
@@ -29,20 +29,23 @@ import java.util.Objects;
  */
 public class GetWeatherUseCase {
 
+    private static final String WEATHER_KEY_PREFIX = "weather:";
+
     private final WeatherProvider weatherProvider;
-    private final WeatherCache weatherCache;
+    private final Cache<WeatherForecast> weatherCache;
     private final LocationResolver locationResolver;
     private final Duration weatherCacheTtl;
 
     public GetWeatherUseCase(
             WeatherProvider weatherProvider,
-            WeatherCache weatherCache,
+            Cache<WeatherForecast> weatherCache,
             LocationResolver locationResolver,
             Duration weatherCacheTtl) {
         this.weatherProvider = Objects.requireNonNull(weatherProvider, "weatherProvider");
         this.weatherCache = Objects.requireNonNull(weatherCache, "weatherCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        this.weatherCacheTtl = requirePositive(weatherCacheTtl, "weatherCacheTtl");
+        CacheAside.requirePositive(weatherCacheTtl, "weatherCacheTtl");
+        this.weatherCacheTtl = weatherCacheTtl;
     }
 
     /**
@@ -56,22 +59,11 @@ public class GetWeatherUseCase {
     public WeatherQueryResult execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String weatherKey = location.weatherCacheKey();
-        var cachedForecast = weatherCache.get(weatherKey);
-        if (cachedForecast.isPresent()) {
-            return new WeatherQueryResult(location, cachedForecast.get());
-        }
-
-        WeatherForecast forecast = weatherProvider.getForecast(location);
-        weatherCache.put(weatherKey, forecast, weatherCacheTtl);
+        String weatherKey = location.weatherCacheKey()
+                .substring(WEATHER_KEY_PREFIX.length());
+        WeatherForecast forecast = CacheAside.getOrLoad(
+                weatherCache, weatherKey, weatherCacheTtl,
+                () -> weatherProvider.getForecast(location));
         return new WeatherQueryResult(location, forecast);
-    }
-
-    private static Duration requirePositive(Duration ttl, String name) {
-        Objects.requireNonNull(ttl, name);
-        if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException(name + " must be positive: " + ttl);
-        }
-        return ttl;
     }
 }

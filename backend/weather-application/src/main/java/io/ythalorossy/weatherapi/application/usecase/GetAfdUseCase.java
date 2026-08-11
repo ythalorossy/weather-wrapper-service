@@ -3,8 +3,8 @@ package io.ythalorossy.weatherapi.application.usecase;
 import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
-import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 
 import java.time.Duration;
@@ -24,15 +24,17 @@ import java.util.Optional;
  */
 public class GetAfdUseCase {
 
+    private static final String AFD_KEY_PREFIX = "afd:";
+
     private final AreaForecastDiscussionProvider provider;
-    private final AfdCache cache;
+    private final Cache<AfdProduct> cache;
     private final LocationResolver locationResolver;
     private final LocationMetadataProvider metadataProvider;
     private final Duration cacheTtl;
 
     public GetAfdUseCase(
             AreaForecastDiscussionProvider provider,
-            AfdCache cache,
+            Cache<AfdProduct> cache,
             LocationResolver locationResolver,
             LocationMetadataProvider metadataProvider,
             Duration cacheTtl) {
@@ -40,7 +42,8 @@ public class GetAfdUseCase {
         this.cache = Objects.requireNonNull(cache, "cache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
         this.metadataProvider = Objects.requireNonNull(metadataProvider, "metadataProvider");
-        this.cacheTtl = requirePositive(cacheTtl, "cacheTtl");
+        CacheAside.requirePositive(cacheTtl, "cacheTtl");
+        this.cacheTtl = cacheTtl;
     }
 
     public Optional<AfdProduct> execute(String cityName) {
@@ -49,22 +52,15 @@ public class GetAfdUseCase {
         if (office.isEmpty()) {
             return Optional.empty();
         }
-        String key = "afd:" + office.get().officeId();
+        String officeId = office.get().officeId();
+        String cacheKey = ("afd:" + officeId).substring(AFD_KEY_PREFIX.length());
 
-        Optional<AfdProduct> cached = cache.get(key);
+        Optional<AfdProduct> cached = cache.get(cacheKey);
         if (cached.isPresent()) return cached;
 
-        Optional<AfdProduct> fresh = provider.getLatest(office.get().officeId());
+        Optional<AfdProduct> fresh = provider.getLatest(officeId);
         if (fresh.isEmpty()) return Optional.empty();
-        cache.put(key, fresh.get(), cacheTtl);
+        cache.put(cacheKey, fresh.get(), cacheTtl);
         return fresh;
-    }
-
-    private static Duration requirePositive(Duration ttl, String name) {
-        Objects.requireNonNull(ttl, name);
-        if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException(name + " must be positive: " + ttl);
-        }
-        return ttl;
     }
 }
