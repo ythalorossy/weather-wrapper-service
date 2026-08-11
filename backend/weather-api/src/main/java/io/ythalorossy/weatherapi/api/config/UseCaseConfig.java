@@ -2,6 +2,7 @@ package io.ythalorossy.weatherapi.api.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.ythalorossy.weatherapi.application.usecase.AlertsPayload;
 import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
@@ -14,7 +15,6 @@ import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.AfdCache;
-import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
@@ -77,6 +77,14 @@ public class UseCaseConfig {
             ObjectMapper mapper,
             MeterRegistry meters) {
         return new RedisJsonCache<>(redis, mapper, "obs", Observation.class, meters);
+    }
+
+    @Bean
+    public Cache<AlertsPayload> alertsCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "alerts", AlertsPayload.class, meters);
     }
 
     @Bean
@@ -149,12 +157,12 @@ public class UseCaseConfig {
     @Bean
     public GetActiveAlertsUseCase getActiveAlertsUseCase(
             AlertProvider alertProvider,
-            AlertCache alertCache,
+            Cache<AlertsPayload> alertsCache,
             LocationResolver locationResolver,
             WeatherProperties properties) {
         return new GetActiveAlertsUseCase(
                 alertProvider,
-                alertCache,
+                alertsCache,
                 locationResolver,
                 properties.getObservations().getAlertTtl());
     }
