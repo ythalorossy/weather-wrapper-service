@@ -39,10 +39,14 @@ public class NwsHourlyWeatherProvider implements HourlyWeatherProvider {
     private static final String TIMER_NAME = "weather.provider.nws";
 
     private final RestClient client;
+    private final NwsPointsService pointsService;
     private final MeterRegistry meterRegistry;
 
-    public NwsHourlyWeatherProvider(RestClient nwsRestClient, MeterRegistry meterRegistry) {
+    public NwsHourlyWeatherProvider(RestClient nwsRestClient,
+                                    NwsPointsService pointsService,
+                                    MeterRegistry meterRegistry) {
         this.client = nwsRestClient;
+        this.pointsService = pointsService;
         this.meterRegistry = meterRegistry;
     }
 
@@ -64,15 +68,8 @@ public class NwsHourlyWeatherProvider implements HourlyWeatherProvider {
     }
 
     private HourlyForecast doFetch(Location location) {
-        // Step 1: lat/lon → gridpoint
-        PointsResponse points = invoke(
-                () -> client.get()
-                        .uri("/points/{lat},{lon}", location.latitude(), location.longitude())
-                        .retrieve()
-                        .body(PointsResponse.class),
-                "NWS /points",
-                location
-        );
+        // Step 1: lat/lon → gridpoint (cached per coordinate)
+        PointsResponse points = pointsService.lookup(location.latitude(), location.longitude());
 
         if (points == null || points.properties() == null) {
             throw new WeatherProviderUnavailableException(

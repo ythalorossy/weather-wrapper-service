@@ -34,10 +34,14 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
     private static final String OFFICE_PATH = "/offices/";
 
     private final RestClient client;
+    private final NwsPointsService pointsService;
     private final MeterRegistry meterRegistry;
 
-    public NwsLocationMetadataProvider(RestClient nwsRestClient, MeterRegistry meterRegistry) {
+    public NwsLocationMetadataProvider(RestClient nwsRestClient,
+                                       NwsPointsService pointsService,
+                                       MeterRegistry meterRegistry) {
         this.client = nwsRestClient;
+        this.pointsService = pointsService;
         this.meterRegistry = meterRegistry;
     }
 
@@ -57,15 +61,8 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
     }
 
     private WeatherOffice doFetch(Location location) {
-        // Step 1: lat/lon → office URL
-        PointsResponse points = invoke(
-                () -> client.get()
-                        .uri("/points/{lat},{lon}", location.latitude(), location.longitude())
-                        .retrieve()
-                        .body(PointsResponse.class),
-                "NWS /points",
-                location
-        );
+        // Step 1: lat/lon → office URL (cached per coordinate)
+        PointsResponse points = pointsService.lookup(location.latitude(), location.longitude());
 
         if (points == null || points.properties() == null) {
             throw new WeatherProviderUnavailableException(
