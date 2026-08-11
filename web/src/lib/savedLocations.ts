@@ -13,33 +13,6 @@
 const SAVED_KEY = 'weather-wrapper-service:saved-cities:v1';
 const LAST_KEY = 'weather-wrapper-service:last-city:v1';
 
-function safeGet(key: string): string | null {
-  try {
-    return typeof window === 'undefined' ? null : window.localStorage.getItem(key);
-  } catch (e) {
-    console.warn('localStorage.getItem failed:', e);
-    return null;
-  }
-}
-
-function safeSet(key: string, value: string): void {
-  try {
-    if (typeof window === 'undefined') return;
-    window.localStorage.setItem(key, value);
-  } catch (e) {
-    console.warn(`localStorage.setItem failed for key "${key}":`, e);
-  }
-}
-
-function safeRemove(key: string): void {
-  try {
-    if (typeof window === 'undefined') return;
-    window.localStorage.removeItem(key);
-  } catch (e) {
-    console.warn(`localStorage.removeItem failed for key "${key}":`, e);
-  }
-}
-
 function normalize(city: string): string {
   return city.trim();
 }
@@ -49,7 +22,12 @@ function sameCity(a: string, b: string): boolean {
 }
 
 export function load(): string[] {
-  const raw = safeGet(SAVED_KEY);
+  let raw: string | null = null;
+  try {
+    if (typeof window !== 'undefined') raw = window.localStorage.getItem(SAVED_KEY);
+  } catch (e) {
+    console.warn('localStorage.getItem failed:', e);
+  }
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -60,7 +38,11 @@ export function load(): string[] {
 }
 
 export function save(list: string[]): void {
-  safeSet(SAVED_KEY, JSON.stringify(list));
+  try {
+    if (typeof window !== 'undefined') window.localStorage.setItem(SAVED_KEY, JSON.stringify(list));
+  } catch (e) {
+    console.warn(`localStorage.setItem failed for key "${SAVED_KEY}":`, e);
+  }
 }
 
 export function add(city: string): string[] {
@@ -84,13 +66,27 @@ export function isSaved(city: string): boolean {
 }
 
 export function loadLastCity(): string | null {
-  return safeGet(LAST_KEY);
+  let raw: string | null = null;
+  try {
+    if (typeof window !== 'undefined') raw = window.localStorage.getItem(LAST_KEY);
+  } catch (e) {
+    console.warn('localStorage.getItem failed:', e);
+  }
+  return raw;
 }
 
 export function saveLastCity(city: string | null): void {
   if (city === null || city.trim().length === 0) {
-    safeRemove(LAST_KEY);
+    try {
+      if (typeof window !== 'undefined') window.localStorage.removeItem(LAST_KEY);
+    } catch (e) {
+      console.warn(`localStorage.removeItem failed for key "${LAST_KEY}":`, e);
+    }
     return;
   }
-  safeSet(LAST_KEY, normalize(city));
+  try {
+    if (typeof window !== 'undefined') window.localStorage.setItem(LAST_KEY, normalize(city));
+  } catch (e) {
+    console.warn(`localStorage.setItem failed for key "${LAST_KEY}":`, e);
+  }
 }
