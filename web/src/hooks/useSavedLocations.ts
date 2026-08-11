@@ -5,6 +5,7 @@ import {
   load,
   loadLastCity,
   remove as removeFromStorage,
+  saveLastCity,
 } from '../lib/savedLocations';
 
 const subscribers = new Set<() => void>();
@@ -56,5 +57,9 @@ export function useLastCity() {
     () => loadLastCity() ?? '',
     () => loadLastCity() ?? '',
   );
-  return { lastCity: lastCity || null };
+  const setLastCity = useCallback((city: string | null) => {
+    saveLastCity(city);
+    emit();
+  }, []);
+  return { lastCity: lastCity || null, setLastCity };
 }
