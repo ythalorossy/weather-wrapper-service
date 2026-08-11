@@ -41,7 +41,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
-import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -125,7 +124,7 @@ class WeatherApiApplicationTest {
     SunTimesProvider sunTimesProvider;
 
     @MockBean
-    SunTimesCache sunTimesCache;
+    Cache<SunTimes> sunTimesCache;
 
     @MockBean
     AreaForecastDiscussionProvider afdProvider;

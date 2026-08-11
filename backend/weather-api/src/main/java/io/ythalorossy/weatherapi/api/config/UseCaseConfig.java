@@ -14,6 +14,7 @@ import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
 import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Observation;
+import io.ythalorossy.weatherapi.domain.model.SunTimes;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
@@ -23,7 +24,6 @@ import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
-import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import io.ythalorossy.weatherapi.infrastructure.cache.RedisJsonCache;
@@ -96,6 +96,14 @@ public class UseCaseConfig {
     }
 
     @Bean
+    public Cache<SunTimes> sunTimesCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "sun", SunTimes.class, meters);
+    }
+
+    @Bean
     public GetWeatherUseCase getWeatherUseCase(
             WeatherProvider weatherProvider,
             Cache<WeatherForecast> weatherCache,
@@ -128,7 +136,7 @@ public class UseCaseConfig {
     @Bean
     public GetSunTimesUseCase getSunTimesUseCase(
             SunTimesProvider sunTimesProvider,
-            SunTimesCache sunTimesCache,
+            Cache<SunTimes> sunTimesCache,
             LocationResolver locationResolver,
             LocationMetadataProvider metadataProvider,
             WeatherProperties properties) {
