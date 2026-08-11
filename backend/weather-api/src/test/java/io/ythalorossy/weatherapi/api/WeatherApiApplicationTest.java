@@ -22,7 +22,6 @@ import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
-import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
@@ -107,7 +106,7 @@ class WeatherApiApplicationTest {
     HourlyWeatherProvider hourlyWeatherProvider;
 
     @MockBean
-    HourlyForecastCache hourlyForecastCache;
+    Cache<HourlyForecast> hourlyForecastCache;
 
     @MockBean
     LocationMetadataProvider locationMetadataProvider;
@@ -313,7 +312,7 @@ class WeatherApiApplicationTest {
     void getHourlyForecastReturnsHourlyCacheHitWithoutCallingProvider() throws Exception {
         when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(location));
         when(weatherCache.get("38.88,-77.09")).thenReturn(Optional.of(forecast));
-        when(hourlyForecastCache.get("hourly:38.88,-77.09")).thenReturn(Optional.of(hourly));
+        when(hourlyForecastCache.get("38.88,-77.09")).thenReturn(Optional.of(hourly));
 
         mvc.perform(get("/api/v1/weather/hourly").param("city", CITY))
                 .andExpect(status().isOk())

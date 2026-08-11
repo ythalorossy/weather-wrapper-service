@@ -4,7 +4,7 @@ import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
-import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class GetHourlyForecastUseCaseTest {
 
     private HourlyWeatherProvider hourlyProvider;
-    private HourlyForecastCache hourlyCache;
+    private Cache<HourlyForecast> hourlyCache;
     private LocationResolver locationResolver;
     private GetHourlyForecastUseCase useCase;
 
@@ -42,12 +42,12 @@ class GetHourlyForecastUseCaseTest {
             "NWS"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String HOURLY_KEY = "hourly:38.88,-77.09";
+    private static final String HOURLY_KEY = "38.88,-77.09";
 
     @BeforeEach
     void setUp() {
         hourlyProvider = mock(HourlyWeatherProvider.class);
-        hourlyCache = mock(HourlyForecastCache.class);
+        hourlyCache = mock(Cache.class);
         locationResolver = mock(LocationResolver.class);
         when(locationResolver.resolve(CITY)).thenReturn(arlington);
         useCase = new GetHourlyForecastUseCase(

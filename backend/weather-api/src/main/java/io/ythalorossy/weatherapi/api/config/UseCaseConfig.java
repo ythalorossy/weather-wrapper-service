@@ -10,6 +10,7 @@ import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
+import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AlertCache;
@@ -17,7 +18,6 @@ import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
-import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
@@ -64,6 +64,14 @@ public class UseCaseConfig {
     }
 
     @Bean
+    public Cache<HourlyForecast> hourlyForecastCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "hourly", HourlyForecast.class, meters);
+    }
+
+    @Bean
     public GetWeatherUseCase getWeatherUseCase(
             WeatherProvider weatherProvider,
             Cache<WeatherForecast> weatherCache,
@@ -80,7 +88,7 @@ public class UseCaseConfig {
     @Bean
     public GetHourlyForecastUseCase getHourlyForecastUseCase(
             HourlyWeatherProvider hourlyWeatherProvider,
-            HourlyForecastCache hourlyForecastCache,
+            Cache<HourlyForecast> hourlyForecastCache,
             LocationResolver locationResolver,
             WeatherProperties properties) {
         // Hourly forecast uses the same 12 h cache TTL as daily; NWS publishes
