@@ -18,7 +18,7 @@ public final class CacheAside {
     }
 
     public static void requirePositive(Duration ttl, String name) {
-        if (ttl.isNegative()) {
+        if (ttl.isZero() || ttl.isNegative()) {
             throw new IllegalArgumentException(name + " must be positive: " + ttl);
         }
     }

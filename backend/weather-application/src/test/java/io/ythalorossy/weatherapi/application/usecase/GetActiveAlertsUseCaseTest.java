@@ -7,8 +7,8 @@ import io.ythalorossy.weatherapi.domain.model.AlertSeverity;
 import io.ythalorossy.weatherapi.domain.model.AlertUrgency;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
-import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,12 +30,11 @@ import static org.mockito.Mockito.when;
 
 class GetActiveAlertsUseCaseTest {
 
-    private AlertProvider alertProvider;
-    private AlertCache alertCache;
-    private LocationResolver locationResolver;
-    private GetActiveAlertsUseCase useCase;
+    private static final String CITY = "Arlington, VA";
+    private static final Location ARLINGTON = new Location(38.8816, -77.0910, "Arlington, VA");
+    private static final String ALERTS_KEY = "38.8816,-77.0910";
+    private static final Duration TTL = Duration.ofMinutes(5);
 
-    private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
     private final WeatherAlert alert = new WeatherAlert(
             "urn:oid:2.49.0.1.test",
             "Severe Thunderstorm Warning",
@@ -52,22 +51,25 @@ class GetActiveAlertsUseCaseTest {
             Instant.now().plusSeconds(3600),
             "https://example.com"
     );
-    private static final String CITY = "Arlington, VA";
-    private static final String ALERTS_KEY = "alerts:38.8816,-77.0910";
+
+    private AlertProvider alertProvider;
+    private Cache<AlertsPayload> alertCache;
+    private LocationResolver locationResolver;
+    private GetActiveAlertsUseCase useCase;
 
     @BeforeEach
     void setUp() {
         alertProvider = mock(AlertProvider.class);
-        alertCache = mock(AlertCache.class);
+        alertCache = mock(Cache.class);
         locationResolver = mock(LocationResolver.class);
-        when(locationResolver.resolve(CITY)).thenReturn(arlington);
-        useCase = new GetActiveAlertsUseCase(
-                alertProvider, alertCache, locationResolver, Duration.ofMinutes(5));
+        when(locationResolver.resolve(CITY)).thenReturn(ARLINGTON);
+        useCase = new GetActiveAlertsUseCase(alertProvider, alertCache, locationResolver, TTL);
     }
 
     @Test
     void cacheHitReturnsWithoutCallingProvider() {
-        when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.of(List.of(alert)));
+        AlertsPayload cached = new AlertsPayload(List.of(alert));
+        when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.of(cached));
 
         List<WeatherAlert> result = useCase.execute(CITY);
 
@@ -79,30 +81,26 @@ class GetActiveAlertsUseCaseTest {
     @Test
     void cacheMissFetchesFromProviderAndWritesThroughWith5MinTtl() {
         when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.empty());
-        when(alertProvider.getActiveAlerts(arlington)).thenReturn(List.of(alert));
+        when(alertProvider.getActiveAlerts(ARLINGTON)).thenReturn(List.of(alert));
 
         List<WeatherAlert> result = useCase.execute(CITY);
 
         assertThat(result).containsExactly(alert);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
-        verify(alertCache).put(eq(ALERTS_KEY), eq(List.of(alert)), ttlCaptor.capture());
-        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofMinutes(5));
+        verify(alertCache).put(eq(ALERTS_KEY), eq(new AlertsPayload(List.of(alert))), ttlCaptor.capture());
+        assertThat(ttlCaptor.getValue()).isEqualTo(TTL);
     }
 
     @Test
     void emptyListStillCaches() {
         when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.empty());
-        when(alertProvider.getActiveAlerts(arlington)).thenReturn(List.of());
+        when(alertProvider.getActiveAlerts(ARLINGTON)).thenReturn(List.of());
 
         List<WeatherAlert> result = useCase.execute(CITY);
 
         assertThat(result).isEmpty();
-
-        // Empty list is still worth caching \u2014 otherwise we'd hit NWS for every
-        // request from a city that has no alerts. 5-min TTL is short enough that
-        // a newly-issued alert will surface quickly.
-        verify(alertCache).put(eq(ALERTS_KEY), eq(List.of()), any());
+        verify(alertCache).put(eq(ALERTS_KEY), eq(new AlertsPayload(List.of())), any());
     }
 
     @Test

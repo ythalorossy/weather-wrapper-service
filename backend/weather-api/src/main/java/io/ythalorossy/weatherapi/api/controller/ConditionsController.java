@@ -75,20 +75,12 @@ public class ConditionsController {
             @RequestParam("city") @NotBlank String city) {
         // Reuse the resolver-backed daily use case just for the resolved Location.
         Location location = getWeather.execute(city);
-        Optional<Observation> obs = getCurrentConditions.execute(city);
-
-        if (obs.isEmpty()) {
-            return ResponseEntity.ok(new CurrentConditionsResponse(
-                    city,
-                    new WeatherResponse.LocationView(location.latitude(), location.longitude(), location.displayName()),
-                    null
-            ));
-        }
+        Observation obs = getCurrentConditions.execute(city);
 
         return ResponseEntity.ok(new CurrentConditionsResponse(
                 city,
                 new WeatherResponse.LocationView(location.latitude(), location.longitude(), location.displayName()),
-                CurrentConditionsResponse.ObservationView.from(obs.get())
+                obs == null ? null : CurrentConditionsResponse.ObservationView.from(obs)
         ));
     }
 }

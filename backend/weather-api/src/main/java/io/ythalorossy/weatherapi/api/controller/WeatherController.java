@@ -20,7 +20,7 @@ import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.WeatherCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 
 import jakarta.validation.constraints.NotBlank;
@@ -39,7 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WeatherController {
 
     private final GetWeatherUseCase getWeather;
-    private final WeatherCache weatherCache;
+    private final Cache<WeatherForecast> weatherCache;
     private final WeatherProvider weatherProvider;
     private final GetHourlyForecastUseCase getHourlyWeather;
     private final GetLocationMetadataUseCase getLocationMetadata;
@@ -47,7 +47,7 @@ public class WeatherController {
 
     public WeatherController(
             GetWeatherUseCase getWeather,
-            WeatherCache weatherCache,
+            Cache<WeatherForecast> weatherCache,
             WeatherProvider weatherProvider,
             GetHourlyForecastUseCase getHourlyWeather,
             GetLocationMetadataUseCase getLocationMetadata,
@@ -186,8 +186,10 @@ public class WeatherController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
+    private static final String WEATHER_NS = "weather";
+
     private WeatherForecast forecastFor(Location location) {
-        return weatherCache.get(location.cacheKey("weather"))
+        return weatherCache.get(location.cacheKey(WEATHER_NS).substring(WEATHER_NS.length() + 1))
                 .orElseGet(() -> weatherProvider.getForecast(location));
     }
 

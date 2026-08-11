@@ -3,8 +3,8 @@ package io.ythalorossy.weatherapi.application.usecase;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
-import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,12 +26,6 @@ import static org.mockito.Mockito.when;
 
 class GetSunTimesUseCaseTest {
 
-    private SunTimesProvider provider;
-    private SunTimesCache cache;
-    private LocationResolver resolver;
-    private LocationMetadataProvider metadataProvider;
-    private GetSunTimesUseCase useCase;
-
     private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
     private final SunTimes sample = new SunTimes(
             LocalDate.of(2026, 8, 9),
@@ -42,10 +36,16 @@ class GetSunTimesUseCaseTest {
             "LWX", "NWS Baltimore/Washington", "KLWX", "America/New_York", "https://api.weather.gov/offices/LWX");
     private static final Duration TTL = Duration.ofHours(48);
 
+    private SunTimesProvider provider;
+    private Cache<SunTimes> cache;
+    private LocationResolver resolver;
+    private LocationMetadataProvider metadataProvider;
+    private GetSunTimesUseCase useCase;
+
     @BeforeEach
     void setUp() {
         provider = mock(SunTimesProvider.class);
-        cache = mock(SunTimesCache.class);
+        cache = mock(Cache.class);
         resolver = mock(LocationResolver.class);
         metadataProvider = mock(LocationMetadataProvider.class);
         when(resolver.resolve("Arlington, VA")).thenReturn(arlington);
@@ -71,7 +71,7 @@ class GetSunTimesUseCaseTest {
 
         ArgumentCaptor<String> keyCap = ArgumentCaptor.forClass(String.class);
         verify(cache).put(keyCap.capture(), eq(sample), eq(TTL));
-        assertThat(keyCap.getValue()).startsWith("sun:38.8816,-77.0910:");
+        assertThat(keyCap.getValue()).startsWith("38.8816,-77.0910:");
     }
 
     @Test

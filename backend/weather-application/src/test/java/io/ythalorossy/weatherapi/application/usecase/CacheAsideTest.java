@@ -46,7 +46,9 @@ class CacheAsideTest {
 
     @Test
     void rejectsNonPositiveTtl() {
-        CacheAside.requirePositive(Duration.ZERO, "ttl");
+        assertThatThrownBy(() -> CacheAside.requirePositive(Duration.ZERO, "ttl"))
+            .isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining("ttl must be positive");
         assertThatThrownBy(() -> CacheAside.requirePositive(Duration.ofSeconds(-1), "ttl"))
             .isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining("ttl must be positive");
