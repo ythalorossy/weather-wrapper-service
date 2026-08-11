@@ -2,6 +2,8 @@ package io.ythalorossy.weatherapi.application.usecase;
 
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
+import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
+import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +29,7 @@ class GetSunTimesUseCaseTest {
     private SunTimesProvider provider;
     private SunTimesCache cache;
     private LocationResolver resolver;
+    private LocationMetadataProvider metadataProvider;
     private GetSunTimesUseCase useCase;
 
     private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
@@ -35,6 +38,8 @@ class GetSunTimesUseCaseTest {
             Instant.parse("2026-08-09T10:42:00Z"),
             Instant.parse("2026-08-10T00:34:00Z"),
             "America/New_York");
+    private final WeatherOffice office = new WeatherOffice(
+            "LWX", "NWS Baltimore/Washington", "KLWX", "America/New_York", "https://api.weather.gov/offices/LWX");
     private static final Duration TTL = Duration.ofHours(48);
 
     @BeforeEach
@@ -42,8 +47,10 @@ class GetSunTimesUseCaseTest {
         provider = mock(SunTimesProvider.class);
         cache = mock(SunTimesCache.class);
         resolver = mock(LocationResolver.class);
+        metadataProvider = mock(LocationMetadataProvider.class);
         when(resolver.resolve("Arlington, VA")).thenReturn(arlington);
-        useCase = new GetSunTimesUseCase(provider, cache, resolver, TTL);
+        when(metadataProvider.getOfficeFor(arlington)).thenReturn(Optional.of(office));
+        useCase = new GetSunTimesUseCase(provider, cache, resolver, metadataProvider, TTL);
     }
 
     @Test
@@ -51,13 +58,13 @@ class GetSunTimesUseCaseTest {
         when(cache.get(any())).thenReturn(Optional.of(sample));
         Optional<SunTimes> result = useCase.execute("Arlington, VA");
         assertThat(result).contains(sample);
-        verify(provider, never()).getSunTimes(any(), any());
+        verify(provider, never()).getSunTimes(any(), any(), any());
     }
 
     @Test
     void cacheMissCallsProviderAndWritesThrough() {
         when(cache.get(any())).thenReturn(Optional.empty());
-        when(provider.getSunTimes(arlington, LocalDate.now(ZoneId.of("America/New_York"))))
+        when(provider.getSunTimes(eq(arlington), any(), eq(ZoneId.of("America/New_York"))))
                 .thenReturn(Optional.of(sample));
         Optional<SunTimes> result = useCase.execute("Arlington, VA");
         assertThat(result).contains(sample);
@@ -70,7 +77,7 @@ class GetSunTimesUseCaseTest {
     @Test
     void providerEmptyDoesNotCache() {
         when(cache.get(any())).thenReturn(Optional.empty());
-        when(provider.getSunTimes(any(), any())).thenReturn(Optional.empty());
+        when(provider.getSunTimes(any(), any(), any())).thenReturn(Optional.empty());
         Optional<SunTimes> result = useCase.execute("Arlington, VA");
         assertThat(result).isEmpty();
         verify(cache, never()).put(any(), any(), any());

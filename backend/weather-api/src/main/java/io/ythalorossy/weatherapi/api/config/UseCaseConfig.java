@@ -85,11 +85,13 @@ public class UseCaseConfig {
             SunTimesProvider sunTimesProvider,
             SunTimesCache sunTimesCache,
             LocationResolver locationResolver,
+            LocationMetadataProvider metadataProvider,
             WeatherProperties properties) {
         return new GetSunTimesUseCase(
                 sunTimesProvider,
                 sunTimesCache,
                 locationResolver,
+                metadataProvider,
                 properties.getSun().getTtl()
         );
     }

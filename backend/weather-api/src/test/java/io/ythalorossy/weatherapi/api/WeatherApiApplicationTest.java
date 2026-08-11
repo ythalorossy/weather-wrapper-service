@@ -156,7 +156,7 @@ class WeatherApiApplicationTest {
         when(observationCache.get(anyString())).thenReturn(Optional.empty());
         when(alertCache.get(anyString())).thenReturn(Optional.empty());
         when(sunTimesCache.get(any())).thenReturn(Optional.empty());
-        when(sunTimesProvider.getSunTimes(any(), any())).thenReturn(Optional.empty());
+        when(sunTimesProvider.getSunTimes(any(), any(), any())).thenReturn(Optional.empty());
         when(afdProvider.getLatest(anyString())).thenReturn(Optional.empty());
         when(afdCache.get(anyString())).thenReturn(Optional.empty());
     }
@@ -451,7 +451,7 @@ class WeatherApiApplicationTest {
         when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
         when(weatherProvider.getForecast(location)).thenReturn(forecast);
         when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
-        when(sunTimesProvider.getSunTimes(any(), any()))
+        when(sunTimesProvider.getSunTimes(any(), any(), any()))
                 .thenReturn(Optional.of(new SunTimes(
                         LocalDate.of(2026, 8, 9),
                         Instant.parse("2026-08-09T10:42:00Z"),
@@ -472,7 +472,7 @@ class WeatherApiApplicationTest {
         when(geocodingProvider.findLocation(CITY)).thenReturn(Optional.of(location));
         when(weatherProvider.getForecast(location)).thenReturn(forecast);
         when(locationMetadataProvider.getOfficeFor(any())).thenReturn(Optional.of(office));
-        when(sunTimesProvider.getSunTimes(any(), any())).thenReturn(Optional.empty());
+        when(sunTimesProvider.getSunTimes(any(), any(), any())).thenReturn(Optional.empty());
 
         mvc.perform(get("/api/v1/weather/metadata").param("city", CITY))
                 .andExpect(status().isOk())

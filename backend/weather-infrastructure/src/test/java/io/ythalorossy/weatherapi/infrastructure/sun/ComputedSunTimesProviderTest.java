@@ -28,7 +28,7 @@ class ComputedSunTimesProviderTest {
         Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
         LocalDate date = LocalDate.of(2026, 6, 21);
 
-        Optional<SunTimes> result = provider.getSunTimes(arlington, date);
+        Optional<SunTimes> result = provider.getSunTimes(arlington, date, ZoneId.of("America/New_York"));
 
         assertThat(result).isPresent();
         SunTimes times = result.get();
@@ -45,7 +45,7 @@ class ComputedSunTimesProviderTest {
         Location honolulu = new Location(21.3069, -157.8583, "Honolulu, HI");
         LocalDate date = LocalDate.of(2026, 12, 21);
 
-        Optional<SunTimes> result = provider.getSunTimes(honolulu, date);
+        Optional<SunTimes> result = provider.getSunTimes(honolulu, date, ZoneId.of("Pacific/Honolulu"));
 
         assertThat(result).isPresent();
         SunTimes times = result.get();
@@ -64,7 +64,7 @@ class ComputedSunTimesProviderTest {
         Location reykjavik = new Location(64.1466, -21.9426, "Reykjavik, Iceland");
         LocalDate date = LocalDate.of(2026, 6, 21);
 
-        Optional<SunTimes> result = provider.getSunTimes(reykjavik, date);
+        Optional<SunTimes> result = provider.getSunTimes(reykjavik, date, ZoneId.of("Atlantic/Reykjavik"));
 
         assertThat(result).isPresent();
     }
