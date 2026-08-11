@@ -2,10 +2,9 @@ package io.ythalorossy.weatherapi.api.config;
 
 import io.github.bucket4j.Bandwidth;
 import io.github.bucket4j.BucketConfiguration;
-import io.github.bucket4j.Refill;
 import io.github.bucket4j.distributed.ExpirationAfterWriteStrategy;
 import io.github.bucket4j.distributed.proxy.ProxyManager;
-import io.github.bucket4j.redis.lettuce.cas.LettuceBasedProxyManager;
+import io.github.bucket4j.redis.lettuce.Bucket4jLettuce;
 import io.lettuce.core.RedisClient;
 import io.lettuce.core.RedisURI;
 import jakarta.servlet.Filter;
@@ -31,7 +30,7 @@ import java.time.Duration;
  *
  * <p>The Lettuce {@link RedisClient} is created here (not shared with Spring
  * Boot's {@code StringRedisTemplate} connection factory) because Bucket4j's
- * {@link LettuceBasedProxyManager} needs a raw {@code RedisClient}. The cost
+ * {@link Bucket4jLettuce} entry point needs a raw {@code RedisClient}. The cost
  * is one multiplexed connection — negligible.
  */
 @Configuration
@@ -50,8 +49,8 @@ public class RateLimitConfig {
         // Expire bucket keys 10 minutes after last write so we don't accumulate
         // an unbounded set of one-off IPs in Redis. Buckets that see traffic
         // stay alive; idle ones fall out.
-        return LettuceBasedProxyManager.builderFor(redisClient)
-                .withExpirationStrategy(
+        return Bucket4jLettuce.casBasedBuilder(redisClient)
+                .expirationAfterWrite(
                         ExpirationAfterWriteStrategy.basedOnTimeForRefillingBucketUpToMax(
                                 Duration.ofMinutes(10)))
                 .build();
@@ -63,14 +62,16 @@ public class RateLimitConfig {
         RateLimitProperties.Bandwidth sustained = props.getSustained();
 
         return BucketConfiguration.builder()
-                .addLimit(Bandwidth.classic(
-                        burst.getCapacity(),
-                        Refill.greedy(burst.getCapacity(),
-                                Duration.ofSeconds(burst.getRefillPeriodSeconds()))))
-                .addLimit(Bandwidth.classic(
-                        sustained.getCapacity(),
-                        Refill.greedy(sustained.getCapacity(),
-                                Duration.ofSeconds(sustained.getRefillPeriodSeconds()))))
+                .addLimit(Bandwidth.builder()
+                        .capacity(burst.getCapacity())
+                        .refillGreedy(burst.getCapacity(),
+                                Duration.ofSeconds(burst.getRefillPeriodSeconds()))
+                        .build())
+                .addLimit(Bandwidth.builder()
+                        .capacity(sustained.getCapacity())
+                        .refillGreedy(sustained.getCapacity(),
+                                Duration.ofSeconds(sustained.getRefillPeriodSeconds()))
+                        .build())
                 .build();
     }
 
