@@ -11,13 +11,10 @@ import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * NWS adapter for {@link LocationMetadataProvider}.
@@ -34,10 +31,14 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
     private static final String OFFICE_PATH = "/offices/";
 
     private final RestClient client;
+    private final NwsPointsService pointsService;
     private final MeterRegistry meterRegistry;
 
-    public NwsLocationMetadataProvider(RestClient nwsRestClient, MeterRegistry meterRegistry) {
+    public NwsLocationMetadataProvider(RestClient nwsRestClient,
+                                       NwsPointsService pointsService,
+                                       MeterRegistry meterRegistry) {
         this.client = nwsRestClient;
+        this.pointsService = pointsService;
         this.meterRegistry = meterRegistry;
     }
 
@@ -57,15 +58,8 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
     }
 
     private WeatherOffice doFetch(Location location) {
-        // Step 1: lat/lon → office URL
-        PointsResponse points = invoke(
-                () -> client.get()
-                        .uri("/points/{lat},{lon}", location.latitude(), location.longitude())
-                        .retrieve()
-                        .body(PointsResponse.class),
-                "NWS /points",
-                location
-        );
+        // Step 1: lat/lon → office URL (cached per coordinate)
+        PointsResponse points = pointsService.lookup(location.latitude(), location.longitude());
 
         if (points == null || points.properties() == null) {
             throw new WeatherProviderUnavailableException(
@@ -84,7 +78,7 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
         }
 
         // Step 2: office details (name + disclaimer)
-        OfficeResponse office = invoke(
+        OfficeResponse office = NwsClient.invoke(
                 () -> client.get()
                         .uri("/offices/{officeId}", officeId)
                         .retrieve()
@@ -119,17 +113,5 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
         // Strip any trailing slashes or path segments
         int slash = tail.indexOf('/');
         return (slash >= 0 ? tail.substring(0, slash) : tail).trim();
-    }
-
-    private static <T> T invoke(Supplier<T> call, String op, Location location) {
-        try {
-            return call.get();
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call " + op + " for " + location.displayName(), e);
-        }
     }
 }

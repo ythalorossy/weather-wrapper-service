@@ -5,7 +5,7 @@ import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.WeatherCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,6 +14,7 @@ import org.mockito.ArgumentCaptor;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -27,63 +28,56 @@ import static org.mockito.Mockito.when;
 
 class GetWeatherUseCaseTest {
 
-    private WeatherProvider weather;
-    private WeatherCache weatherCache;
-    private LocationResolver locationResolver;
-    private GetWeatherUseCase useCase;
+    private static final String CITY = "Arlington, VA";
+    private static final Location ARLINGTON = new Location(38.8816, -77.0910, "Arlington, VA");
+    private static final String WEATHER_KEY = "38.8816,-77.0910";
+    private static final Duration TTL = Duration.ofHours(12);
 
-    private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
     private final WeatherForecast forecast = new WeatherForecast(
             List.of(new ForecastPeriod("Today", Temperature.fahrenheit(85), "5 mph", "NW",
                     "Sunny", "Sunny, with a high near 85.", true)),
             Instant.now(),
             "NWS"
     );
-    private static final String CITY = "Arlington, VA";
-    private static final String WEATHER_KEY = "weather:38.88,-77.09";
+
+    private WeatherProvider weather;
+    private Cache<WeatherForecast> weatherCache;
+    private LocationResolver locationResolver;
+    private GetWeatherUseCase useCase;
 
     @BeforeEach
     void setUp() {
         weather = mock(WeatherProvider.class);
-        weatherCache = mock(WeatherCache.class);
+        weatherCache = mock(Cache.class);
         locationResolver = mock(LocationResolver.class);
-        when(locationResolver.resolve(CITY)).thenReturn(arlington);
-        useCase = new GetWeatherUseCase(
-                weather, weatherCache, locationResolver, Duration.ofHours(12));
+        when(locationResolver.resolve(CITY)).thenReturn(ARLINGTON);
+        useCase = new GetWeatherUseCase(weather, weatherCache, locationResolver, TTL);
     }
 
-    // -- Weather cache hit
-
     @Test
-    void weatherCacheHitReturnsWithoutCallingProvider() {
-        when(weatherCache.get(WEATHER_KEY))
-                .thenReturn(java.util.Optional.of(forecast));
+    void cacheHitReturnsWithoutCallingProvider() {
+        when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.of(forecast));
 
-        WeatherQueryResult result = useCase.execute(CITY);
+        Location location = useCase.execute(CITY);
 
-        assertThat(result.location()).isEqualTo(arlington);
-        assertThat(result.forecast()).isEqualTo(forecast);
+        assertThat(location).isEqualTo(ARLINGTON);
         verify(weather, never()).getForecast(any());
         verify(weatherCache, never()).put(anyString(), any(), any());
     }
 
-    // -- Weather cache miss
-
     @Test
-    void weatherCacheMissCallsProviderAndWritesThroughWith12HourTtl() {
-        when(weatherCache.get(WEATHER_KEY)).thenReturn(java.util.Optional.empty());
-        when(weather.getForecast(arlington)).thenReturn(forecast);
+    void cacheMissCallsProviderAndWritesThroughWith12HourTtl() {
+        when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.empty());
+        when(weather.getForecast(ARLINGTON)).thenReturn(forecast);
 
-        WeatherQueryResult result = useCase.execute(CITY);
+        Location location = useCase.execute(CITY);
 
-        assertThat(result.forecast()).isEqualTo(forecast);
+        assertThat(location).isEqualTo(ARLINGTON);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
         verify(weatherCache).put(eq(WEATHER_KEY), eq(forecast), ttlCaptor.capture());
-        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofHours(12));
+        assertThat(ttlCaptor.getValue()).isEqualTo(TTL);
     }
-
-    // -- Resolver throws LocationNotFound
 
     @Test
     void locationNotFoundFromResolverPropagates() {
@@ -96,8 +90,6 @@ class GetWeatherUseCaseTest {
         verify(weather, never()).getForecast(any());
         verify(weatherCache, never()).put(anyString(), any(), any());
     }
-
-    // -- Constructor validation
 
     @Test
     void constructorRejectsNullCollaborators() {

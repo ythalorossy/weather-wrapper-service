@@ -20,7 +20,7 @@ public record HourlyWeatherResponse(
         String city,
 
         @Schema(description = "Coordinates resolved via Nominatim + a human-readable name.")
-        LocationView resolvedLocation,
+        WeatherResponse.LocationView resolvedLocation,
 
         @Schema(description = "Hourly forecast payload from the National Weather Service.")
         ForecastView forecast
@@ -35,20 +35,6 @@ public record HourlyWeatherResponse(
                 null, // filled by controller to avoid coupling domain to API layer
                 new ForecastView(forecast.generatedAt(), forecast.source(), periods)
         );
-    }
-
-    @Schema(description = "Lat/lon + display name for the resolved city.")
-    public record LocationView(
-            @Schema(description = "Latitude in decimal degrees.", example = "38.8816")
-            double latitude,
-
-            @Schema(description = "Longitude in decimal degrees.", example = "-77.0910")
-            double longitude,
-
-            @Schema(description = "Human-readable name (city, county, state, country).",
-                    example = "Arlington, Arlington County, Virginia, United States")
-            String displayName
-    ) {
     }
 
     @Schema(description = "Forecast envelope from the National Weather Service.")
@@ -73,7 +59,7 @@ public record HourlyWeatherResponse(
             Instant startTime,
 
             @Schema(description = "Temperature for this period.")
-            TemperatureView temperature,
+            WeatherResponse.TemperatureView temperature,
 
             @Schema(description = "Wind speed as a human string, e.g. `5 mph`.",
                     example = "5 mph")
@@ -92,24 +78,10 @@ public record HourlyWeatherResponse(
     ) {
     }
 
-    @Schema(description = "Temperature value + unit + pre-formatted display string.")
-    public record TemperatureView(
-            @Schema(description = "Numeric temperature value (in `unit`).", example = "85")
-            int value,
-
-            @Schema(description = "Unit code (`FAHRENHEIT` or `CELSIUS`).", example = "FAHRENHEIT")
-            String unit,
-
-            @Schema(description = "Pre-formatted string with degree symbol for direct display.",
-                    example = "85\u00b0F")
-            String formatted
-    ) {
-    }
-
     private static PeriodView toPeriodView(HourlyForecastPeriod p) {
         return new PeriodView(
                 p.startTime(),
-                new TemperatureView(p.temperature().value(), p.temperature().unit().name(), p.temperature().formatted()),
+                new WeatherResponse.TemperatureView(p.temperature().value(), p.temperature().unit().name(), p.temperature().formatted()),
                 p.windSpeed(),
                 p.windDirection(),
                 p.shortForecast(),

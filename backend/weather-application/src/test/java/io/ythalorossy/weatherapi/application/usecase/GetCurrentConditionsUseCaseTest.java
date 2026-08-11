@@ -3,7 +3,7 @@ package io.ythalorossy.weatherapi.application.usecase;
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
-import io.ythalorossy.weatherapi.domain.port.ObservationCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -25,39 +25,39 @@ import static org.mockito.Mockito.when;
 
 class GetCurrentConditionsUseCaseTest {
 
-    private ObservationProvider observationProvider;
-    private ObservationCache observationCache;
-    private LocationResolver locationResolver;
-    private GetCurrentConditionsUseCase useCase;
+    private static final String CITY = "Arlington, VA";
+    private static final Location ARLINGTON = new Location(38.8816, -77.0910, "Arlington, VA");
+    private static final String OBS_KEY = "38.8816,-77.0910";
+    private static final Duration TTL = Duration.ofMinutes(10);
 
-    private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
     private final Observation obs = new Observation(
             "KIAD",
             "Washington/Dulles International Airport, VA",
             Instant.parse("2026-08-08T21:35:00Z"),
             78.4, 71.6, 5.2, 315, "NW", 83.5, 30.02, "Cloudy"
     );
-    private static final String CITY = "Arlington, VA";
-    private static final String OBS_KEY = "obs:38.88,-77.09";
+
+    private ObservationProvider observationProvider;
+    private Cache<Observation> observationCache;
+    private LocationResolver locationResolver;
+    private GetCurrentConditionsUseCase useCase;
 
     @BeforeEach
     void setUp() {
         observationProvider = mock(ObservationProvider.class);
-        observationCache = mock(ObservationCache.class);
+        observationCache = mock(Cache.class);
         locationResolver = mock(LocationResolver.class);
-        when(locationResolver.resolve(CITY)).thenReturn(arlington);
-        useCase = new GetCurrentConditionsUseCase(
-                observationProvider, observationCache, locationResolver,
-                Duration.ofMinutes(10));
+        when(locationResolver.resolve(CITY)).thenReturn(ARLINGTON);
+        useCase = new GetCurrentConditionsUseCase(observationProvider, observationCache, locationResolver, TTL);
     }
 
     @Test
     void cacheHitReturnsWithoutCallingProvider() {
         when(observationCache.get(OBS_KEY)).thenReturn(Optional.of(obs));
 
-        Optional<Observation> result = useCase.execute(CITY);
+        Observation result = useCase.execute(CITY);
 
-        assertThat(result).contains(obs);
+        assertThat(result).isEqualTo(obs);
         verify(observationProvider, never()).getCurrentObservation(any());
         verify(observationCache, never()).put(anyString(), any(), any());
     }
@@ -65,25 +65,24 @@ class GetCurrentConditionsUseCaseTest {
     @Test
     void cacheMissFetchesFromProviderAndWritesThroughWith10MinTtl() {
         when(observationCache.get(OBS_KEY)).thenReturn(Optional.empty());
-        when(observationProvider.getCurrentObservation(arlington)).thenReturn(Optional.of(obs));
+        when(observationProvider.getCurrentObservation(ARLINGTON)).thenReturn(Optional.of(obs));
 
-        Optional<Observation> result = useCase.execute(CITY);
+        Observation result = useCase.execute(CITY);
 
-        assertThat(result).contains(obs);
+        assertThat(result).isEqualTo(obs);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
         verify(observationCache).put(eq(OBS_KEY), eq(obs), ttlCaptor.capture());
-        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofMinutes(10));
+        assertThat(ttlCaptor.getValue()).isEqualTo(TTL);
     }
 
     @Test
-    void emptyResultFromProviderDoesNotWriteToCache() {
+    void emptyResultFromProviderThrows() {
         when(observationCache.get(OBS_KEY)).thenReturn(Optional.empty());
-        when(observationProvider.getCurrentObservation(arlington)).thenReturn(Optional.empty());
+        when(observationProvider.getCurrentObservation(ARLINGTON)).thenReturn(Optional.empty());
 
-        Optional<Observation> result = useCase.execute(CITY);
-
-        assertThat(result).isEmpty();
+        assertThatThrownBy(() -> useCase.execute(CITY))
+                .isInstanceOf(IllegalStateException.class);
         verify(observationCache, never()).put(anyString(), any(), any());
     }
 

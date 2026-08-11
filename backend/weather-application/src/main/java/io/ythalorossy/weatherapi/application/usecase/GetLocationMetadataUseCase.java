@@ -38,15 +38,11 @@ public class GetLocationMetadataUseCase {
     public LocationMetadataResult execute(String cityName) {
         // Resolve the city first so a "not found" bubbles up before we
         // spend cycles on the sun calculation.
-        locationResolver.resolve(cityName);
+        io.ythalorossy.weatherapi.domain.model.Location location = locationResolver.resolve(cityName);
         WeatherOffice office = metadataProvider
-                .getOfficeFor(resolvedLocation(cityName))
+                .getOfficeFor(location)
                 .orElseThrow(() -> new LocationNotFoundException(cityName));
         Optional<SunTimes> sun = getSunTimes.execute(cityName);
         return new LocationMetadataResult(office, sun);
-    }
-
-    private io.ythalorossy.weatherapi.domain.model.Location resolvedLocation(String cityName) {
-        return locationResolver.resolve(cityName);
     }
 }

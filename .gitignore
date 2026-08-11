@@ -50,3 +50,10 @@ jacoco.exec
 
 # Superpowers SDD workspace (skill: subagent-driven-development)
 .superpowers/
+
+# Vite dev output / logs (should not be committed)
+web/dev.log
+web/dist/
+
+# GitHub Copilot session state (ephemeral)
+.github/modernize/

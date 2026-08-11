@@ -8,17 +8,15 @@ import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.infrastructure.observation.dto.GridpointStationsResponse;
 import io.ythalorossy.weatherapi.infrastructure.observation.dto.ObservationLatestResponse;
+import io.ythalorossy.weatherapi.infrastructure.weather.NwsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * NWS adapter for {@link ObservationProvider}.
@@ -60,7 +58,7 @@ public class NwsObservationProvider implements ObservationProvider {
 
     private Optional<Observation> doFetch(Location location) {
         // Step 1: find nearby stations (sorted by distance; first is nearest).
-        GridpointStationsResponse stations = invoke(
+        GridpointStationsResponse stations = NwsClient.invoke(
                 () -> client.get()
                         .uri("/points/{lat},{lon}/stations", location.latitude(), location.longitude())
                         .retrieve()
@@ -84,7 +82,7 @@ public class NwsObservationProvider implements ObservationProvider {
         }
 
         // Step 2: fetch latest observation from the nearest station.
-        ObservationLatestResponse obs = invoke(
+        ObservationLatestResponse obs = NwsClient.invoke(
                 () -> client.get()
                         .uri("/stations/{stationId}/observations/latest", stationId)
                         .retrieve()
@@ -152,19 +150,5 @@ public class NwsObservationProvider implements ObservationProvider {
                          "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"};
         int idx = (int) Math.round(((degrees % 360) / 22.5)) % 16;
         return dirs[idx];
-    }
-
-    private static <T> T invoke(Supplier<T> call, String op, Location location) {
-        try {
-            return call.get();
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            log.warn("NWS call {} failed for {}: {} ({})", op, location.displayName(),
-                    e.getClass().getSimpleName(), e.getMessage(), e);
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call " + op + " for " + location.displayName() + ": " + e.getMessage(), e);
-        }
     }
 }

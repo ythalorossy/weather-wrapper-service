@@ -9,7 +9,6 @@ import net.e175.klaus.solarpositioning.SPA;
 import net.e175.klaus.solarpositioning.SunriseResult;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
@@ -42,22 +41,15 @@ public class ComputedSunTimesProvider implements SunTimesProvider {
             SunriseResult result = SPA.calculateSunriseTransitSet(
                     noon, location.latitude(), location.longitude(), SUNRISE_SUNSET_ZENITH);
 
-            if (result.getClass().getSimpleName().equals("RegularDay")) {
-                ZonedDateTime sunrise = (ZonedDateTime) result.getClass()
-                        .getMethod("sunrise").invoke(result);
-                ZonedDateTime sunset = (ZonedDateTime) result.getClass()
-                        .getMethod("sunset").invoke(result);
-
-                SunTimes times = new SunTimes(
-                        date,
-                        sunrise.toInstant(),
-                        sunset.toInstant(),
-                        zone.getId());
-                sample.stop(meterRegistry.timer(TIMER_NAME, "outcome", "success"));
-                return Optional.of(times);
-            }
-
             sample.stop(meterRegistry.timer(TIMER_NAME, "outcome", "success"));
+
+            // Library bug: at borderline polar latitudes (~64°N at solstice),
+            // solarpositioning returns RegularDay with sunrise > sunset. Treat
+            // those as all-day / all-night and surface empty.
+            if (result instanceof SunriseResult.RegularDay r && r.sunrise().isBefore(r.sunset())) {
+                return Optional.of(new SunTimes(
+                        date, r.sunrise().toInstant(), r.sunset().toInstant(), zone.getId()));
+            }
             return Optional.empty();
         } catch (Exception e) {
             sample.stop(meterRegistry.timer(TIMER_NAME, "outcome", "failure"));

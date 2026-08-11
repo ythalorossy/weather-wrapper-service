@@ -1,10 +1,11 @@
 package io.ythalorossy.weatherapi.application.usecase;
 
+import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
-import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,12 +28,11 @@ import static org.mockito.Mockito.when;
 
 class GetHourlyForecastUseCaseTest {
 
-    private HourlyWeatherProvider hourlyProvider;
-    private HourlyForecastCache hourlyCache;
-    private LocationResolver locationResolver;
-    private GetHourlyForecastUseCase useCase;
+    private static final String CITY = "Arlington, VA";
+    private static final Location ARLINGTON = new Location(38.8816, -77.0910, "Arlington, VA");
+    private static final String HOURLY_KEY = "38.8816,-77.0910";
+    private static final Duration TTL = Duration.ofHours(12);
 
-    private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
     private final HourlyForecast hourly = new HourlyForecast(
             List.of(new HourlyForecastPeriod(
                     Instant.parse("2026-08-08T19:00:00Z"),
@@ -41,17 +41,19 @@ class GetHourlyForecastUseCaseTest {
             Instant.now(),
             "NWS"
     );
-    private static final String CITY = "Arlington, VA";
-    private static final String HOURLY_KEY = "hourly:38.88,-77.09";
+
+    private HourlyWeatherProvider hourlyProvider;
+    private Cache<HourlyForecast> hourlyCache;
+    private LocationResolver locationResolver;
+    private GetHourlyForecastUseCase useCase;
 
     @BeforeEach
     void setUp() {
         hourlyProvider = mock(HourlyWeatherProvider.class);
-        hourlyCache = mock(HourlyForecastCache.class);
+        hourlyCache = mock(Cache.class);
         locationResolver = mock(LocationResolver.class);
-        when(locationResolver.resolve(CITY)).thenReturn(arlington);
-        useCase = new GetHourlyForecastUseCase(
-                hourlyProvider, hourlyCache, locationResolver, Duration.ofHours(12));
+        when(locationResolver.resolve(CITY)).thenReturn(ARLINGTON);
+        useCase = new GetHourlyForecastUseCase(hourlyProvider, hourlyCache, locationResolver, TTL);
     }
 
     @Test
@@ -68,7 +70,7 @@ class GetHourlyForecastUseCaseTest {
     @Test
     void cacheMissFetchesFromProviderAndWritesThroughWith12HourTtl() {
         when(hourlyCache.get(HOURLY_KEY)).thenReturn(Optional.empty());
-        when(hourlyProvider.getHourlyForecast(arlington)).thenReturn(Optional.of(hourly));
+        when(hourlyProvider.getHourlyForecast(ARLINGTON)).thenReturn(Optional.of(hourly));
 
         HourlyForecast result = useCase.execute(CITY);
 
@@ -76,16 +78,16 @@ class GetHourlyForecastUseCaseTest {
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
         verify(hourlyCache).put(eq(HOURLY_KEY), eq(hourly), ttlCaptor.capture());
-        assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofHours(12));
+        assertThat(ttlCaptor.getValue()).isEqualTo(TTL);
     }
 
     @Test
     void locationNotFoundFromResolverPropagates() {
         when(locationResolver.resolve("NowhereVille"))
-                .thenThrow(new io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException("NowhereVille"));
+                .thenThrow(new LocationNotFoundException("NowhereVille"));
 
         assertThatThrownBy(() -> useCase.execute("NowhereVille"))
-                .isInstanceOf(io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException.class);
+                .isInstanceOf(LocationNotFoundException.class);
 
         verify(hourlyProvider, never()).getHourlyForecast(any());
         verify(hourlyCache, never()).put(anyString(), any(), any());

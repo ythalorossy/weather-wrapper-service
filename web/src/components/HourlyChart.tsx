@@ -168,15 +168,6 @@ export function HourlyChart({ data, rowRefs, hours = 48, sun, today }: Props): J
 
   const ariaLabel = `Hourly temperature from ${Math.round(minT)}°F to ${Math.round(maxT)}°F over ${periods.length} hours.`;
 
-  function onClickHour(i: number) {
-    const el = rowRefs.current?.[i];
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      el.classList.add('ring-2', 'ring-sky-300');
-      window.setTimeout(() => el.classList.remove('ring-2', 'ring-sky-300'), 1500);
-    }
-  }
-
   return (
     <div
       data-testid="hourly-chart"
@@ -187,7 +178,7 @@ export function HourlyChart({ data, rowRefs, hours = 48, sun, today }: Props): J
       <ReactECharts
         ref={chartRef}
         option={option}
-        onEvents={{ click: (p: { dataIndex: number }) => onClickHour(p.dataIndex) }}
+        onEvents={{ click: (p: { dataIndex: number }) => onClickHour(rowRefs, p.dataIndex) }}
         opts={{ renderer: 'svg' }}
         style={{ height: '100%', width: '100%' }}
         lazyUpdate

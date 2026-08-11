@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useWeatherQuery } from './hooks/useWeatherQuery';
 import { useHourlyWeather } from './hooks/useHourlyWeather';
 import { useLocationMetadata } from './hooks/useLocationMetadata';
 import { useCurrentConditions } from './hooks/useCurrentConditions';
 import { useAlerts } from './hooks/useAlerts';
-import { loadLastCity, saveLastCity } from './lib/savedLocations';
+import { useLastCity } from './hooks/useSavedLocations';
 import { SearchForm } from './components/SearchForm';
 import { SavedLocationsPills } from './components/SavedLocationsPills';
 import { SaveLocationButton } from './components/SaveLocationButton';
@@ -14,26 +14,8 @@ import { CurrentConditionsCard } from './components/CurrentConditionsCard';
 import { AlertsBanner } from './components/AlertsBanner';
 import { AlertList } from './components/AlertList';
 
-const LAST_CITY_KEY = 'weather-wrapper-service:last-city:v1';
-
 export default function App() {
-  const [city, setCity] = useState<string | null>(() => loadLastCity());
-  // Sync `city` from another tab's localStorage change (storage events don't
-  // fire in the same tab, so this only reacts to external writes).
-  useEffect(() => {
-    function onStorage(e: StorageEvent) {
-      if (e.key === null || e.key === LAST_CITY_KEY) {
-        setCity(loadLastCity());
-      }
-    }
-    window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
-  }, []);
-  // Persist `city` whenever it changes (skip null = clear).
-  useEffect(() => {
-    saveLastCity(city);
-  }, [city]);
-
+  const { lastCity: city, setLastCity: setCity } = useLastCity();
   const [dismissedAlertIds, setDismissedAlertIds] = useState<Set<string>>(() => new Set());
 
   const daily = useWeatherQuery(city);

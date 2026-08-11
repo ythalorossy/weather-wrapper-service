@@ -1,11 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { CurrentConditionsResponse, fetchCurrentConditions, WeatherError } from '../api/weather';
 
-export const CONDITIONS_QUERY_KEY = '***';
-
 export function useCurrentConditions(city: string | null) {
   return useQuery<CurrentConditionsResponse, WeatherError>({
-    queryKey: [CONDITIONS_QUERY_KEY, city],
+    queryKey: ['conditions', city],
     queryFn: () => fetchCurrentConditions(city!),
     enabled: city !== null && city.trim().length > 0,
     // Match backend's 10-minute cache TTL. Station data refreshes every 5-15

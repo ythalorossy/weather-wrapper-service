@@ -10,7 +10,13 @@ import java.util.Objects;
  *
  * <p>Immutable. Source identifies which upstream provider produced this forecast
  * (e.g., "National Weather Service") so consumers can audit provenance.
+ *
+ * <p>Sibling to {@link HourlyForecast}; kept as a separate record because
+ * {@link ForecastPeriod} carries {@code name} + {@code detailedForecast} that
+ * {@link HourlyForecastPeriod} does not, and the two period types are not
+ * type-compatible.
  */
+// # ponytail: candidates for merge with HourlyForecast; kept split because period-type differs (ForecastPeriod has name+detailedForecast, HourlyForecastPeriod has startTime).
 public record WeatherForecast(
         List<ForecastPeriod> periods,
         Instant generatedAt,
