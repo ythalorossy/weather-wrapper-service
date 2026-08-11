@@ -23,9 +23,9 @@ sequenceDiagram
     participant TQ as TanStack Query
     participant API as WeatherController<br/>(Spring Boot)
     participant UC as GetWeatherUseCase
-    participant LC as LocationCache<br/>(Redis)
+    participant LC as Cache<Location><br/>(Redis)
     participant GP as Nominatim
-    participant WC as WeatherCache<br/>(Redis)
+    participant WC as Cache<WeatherForecast><br/>(Redis)
     participant NWS as api.weather.gov
 
     User->>UI: type "Arlington, VA" + submit
@@ -33,7 +33,7 @@ sequenceDiagram
     App->>TQ: useQuery(["weather","Arlington, VA"]) (enabled)
     TQ->>API: GET /api/v1/weather?city=... (via Vite /api proxy)
     API->>UC: execute(city)
-    UC->>LC: get(normalized-city)
+    UC->>LC: get(geo:normalized-city)
     alt cache miss
         UC->>GP: GET /search?q=...&format=json
         GP-->>UC: lat/lon + displayName
@@ -41,7 +41,7 @@ sequenceDiagram
     else cache hit
         LC-->>UC: Location
     end
-    UC->>WC: get(weather:{lat:.2f},{lon:.2f})
+    UC->>WC: get(weather:{lat:.4f},{lon:.4f})
     alt cache miss
         UC->>NWS: GET /points/{lat},{lon}
         NWS-->>UC: gridId/x/y + forecast zones
@@ -51,7 +51,7 @@ sequenceDiagram
     else cache hit
         WC-->>UC: forecast
     end
-    UC-->>API: WeatherQueryResult
+    UC-->>API: Location (forecast written-through to cache)
     API-->>TQ: 200 WeatherResponse JSON
     TQ->>TQ: store in cache (staleTime 30m, gcTime 60m)
     TQ-->>App: { data, isPending: false }
@@ -63,9 +63,9 @@ sequenceDiagram
 | Layer | Key | TTL | Hit effect |
 |---|---|---|---|
 | TanStack Query | `["weather", city]` | staleTime 30 min / gcTime 60 min | Instant re-render, no network |
-| LocationCache (Redis) | `geo:{normalized-city}` | 30 d | Skips Nominatim |
-| LocationCache (Redis) | `absent:geo:{normalized-city}` | 60 s | Skips Nominatim, returns 404 |
-| WeatherCache (Redis) | `weather:{lat:.2f},{lon:.2f}` | 12 h | Skips both NWS calls |
+| `Cache<Location>` (Redis) | `geo:{normalized-city}` | 30 d | Skips Nominatim |
+| `Cache<Location>` (Redis) | `absent:geo:{normalized-city}` | 60 s | Skips Nominatim, returns 404 |
+| `Cache<WeatherForecast>` (Redis) | `weather:{lat:.4f},{lon:.4f}` | 12 h | Skips both NWS calls |
 
 ## `GetWeatherUseCase`
 
@@ -80,8 +80,8 @@ geocoding layer. The code lives in
 |---|---|
 | `GeocodingProvider` | Port to Nominatim (city → Location) |
 | `WeatherProvider` | Port to NWS (Location → forecast) |
-| `LocationCache` | Redis, both positive (`geo:*`) and negative (`absent:geo:*`) entries |
-| `WeatherCache` | Redis, positive (`weather:*`) entries |
+| `Cache<Location>` | Redis, both positive (`geo:*`) and negative (`absent:geo:*`) entries |
+| `Cache<WeatherForecast>` | Redis, positive (`weather:*`) entries |
 
 ### Happy path: cold cache
 
@@ -94,9 +94,9 @@ sequenceDiagram
     actor UI
     participant Ctrl as WeatherController
     participant UC as GetWeatherUseCase
-    participant LC as LocationCache
+    participant LC as Cache<Location>
     participant GP as GeocodingProvider
-    participant WC as WeatherCache
+    participant WC as Cache<WeatherForecast>
     participant WP as WeatherProvider
 
     UI->>Ctrl: GET /api/v1/weather?city=X
@@ -111,7 +111,7 @@ sequenceDiagram
     GP-->>UC: Location(lat, lon)
     UC->>LC: put("geo:x", Location, 30d)
 
-    Note over UC,WC: Layer 2 — Location → forecast
+    Note over UC,WC: Layer 2 — Location → forecast (write-through)
     UC->>WC: get("weather:lat,lon")
     WC-->>UC: empty
     UC->>WP: getForecast(Location)
@@ -119,7 +119,7 @@ sequenceDiagram
     WP-->>UC: WeatherForecast(periods)
     UC->>WC: put("weather:lat,lon", forecast, 12h)
 
-    UC-->>Ctrl: WeatherQueryResult
+    UC-->>Ctrl: Location (controller reads cache for forecast to render)
     Ctrl-->>UI: 200 + JSON
 ```
 
@@ -128,7 +128,7 @@ sequenceDiagram
 Every legal path through `execute(city)`. Use this as the source of
 truth for "what happens if X" questions before reading the code.
 
-| Scenario | `LocationCache.get` | `LocationCache.isAbsent` | Geocoder | `WeatherCache.get` | Weather | Result |
+| Scenario | `Cache<Location>.get` | `Cache<Location>.isAbsent` | Geocoder | `Cache<WeatherForecast>.get` | Weather | Result |
 |---|---|---|---|---|---|---|
 | Cold cache (above) | empty | false | called → Location | empty | called → forecast | 200 forecast |
 | Geo cached, weather cached | hit | — | — | hit | — | 200 forecast |
@@ -152,7 +152,7 @@ sequenceDiagram
     actor Client
     participant Ctrl as Controller
     participant UC as UseCase
-    participant LC as LocationCache
+    participant LC as Cache<Location>
     participant GP as GeocodingProvider
 
     Note over Client,GP: Request #1 — Nominatim absorbs the miss

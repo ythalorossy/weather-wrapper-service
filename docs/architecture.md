@@ -30,7 +30,7 @@ flowchart LR
    - **Positive hit** → use the cached `Location`.
    - **Negative hit** (`isAbsent`) → return 404 without calling Nominatim.
    - **Miss** → call Nominatim, write through to cache.
-2. **Weather cache lookup.** Cache key = `weather:{lat:.2f},{lon:.2f}` (e.g., `weather:38.88,-77.09`).
+2. **Weather cache lookup.** Cache key = `weather:{lat:.4f},{lon:.4f}` (e.g., `weather:38.8816,-77.0910`).
    Default TTL: 12 h (`weather.cache.ttl`).
    - **Hit** → return the cached forecast.
    - **Miss** → continue.

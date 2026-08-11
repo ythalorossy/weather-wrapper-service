@@ -8,7 +8,7 @@ API      →  http://localhost:8080  (backend)
 GET /api/v1/weather?city=Arlington,%20VA   →   forecast JSON
 ```
 
-Geocoding delegated to Nominatim. Cache keys derived from lat/lon (2 decimals).
+Geocoding delegated to Nominatim. Cache keys derived from lat/lon (4 decimals).
 
 ## Quick start
 

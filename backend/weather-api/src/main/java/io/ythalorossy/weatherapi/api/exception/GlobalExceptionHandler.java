@@ -27,7 +27,8 @@ public class GlobalExceptionHandler {
     private static final URI VALIDATION_TYPE =
             URI.create("https://weather-wrapper-service.ythalorossy.io/errors/validation");
 
-    @ExceptionHandler(LocationNotFoundException.class)
+    @SuppressWarnings("null")
+@ExceptionHandler(LocationNotFoundException.class)
     public ProblemDetail handleLocationNotFound(LocationNotFoundException e) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, e.getMessage());
         pd.setType(LOCATION_NOT_FOUND_TYPE);
@@ -36,7 +37,8 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
-    @ExceptionHandler(WeatherProviderUnavailableException.class)
+    @SuppressWarnings("null")
+@ExceptionHandler(WeatherProviderUnavailableException.class)
     public ProblemDetail handleWeatherProviderUnavailable(WeatherProviderUnavailableException e) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_GATEWAY, e.getMessage());
         pd.setType(UPSTREAM_UNAVAILABLE_TYPE);
@@ -44,7 +46,8 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
-    @ExceptionHandler(IllegalArgumentException.class)
+    @SuppressWarnings("null")
+@ExceptionHandler(IllegalArgumentException.class)
     public ProblemDetail handleIllegalArgument(IllegalArgumentException e) {
         ProblemDetail pd = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, e.getMessage());
         pd.setType(INVALID_REQUEST_TYPE);
@@ -56,7 +59,8 @@ public class GlobalExceptionHandler {
      * Bean Validation failures on @RequestParam / @PathVariable (e.g., @NotBlank).
      * Maps to 400 with the list of violations as a {@code violations} property.
      */
-    @ExceptionHandler(ConstraintViolationException.class)
+    @SuppressWarnings("null")
+@ExceptionHandler(ConstraintViolationException.class)
     public ProblemDetail handleConstraintViolation(ConstraintViolationException e) {
         String violations = e.getConstraintViolations().stream()
                 .map(v -> v.getPropertyPath() + ": " + v.getMessage())
