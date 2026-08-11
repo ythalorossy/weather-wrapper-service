@@ -11,6 +11,7 @@ import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
+import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AlertCache;
@@ -21,7 +22,6 @@ import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
-import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
@@ -69,6 +69,14 @@ public class UseCaseConfig {
             ObjectMapper mapper,
             MeterRegistry meters) {
         return new RedisJsonCache<>(redis, mapper, "hourly", HourlyForecast.class, meters);
+    }
+
+    @Bean
+    public Cache<Observation> observationCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "obs", Observation.class, meters);
     }
 
     @Bean
@@ -128,7 +136,7 @@ public class UseCaseConfig {
     @Bean
     public GetCurrentConditionsUseCase getCurrentConditionsUseCase(
             ObservationProvider observationProvider,
-            ObservationCache observationCache,
+            Cache<Observation> observationCache,
             LocationResolver locationResolver,
             WeatherProperties properties) {
         return new GetCurrentConditionsUseCase(

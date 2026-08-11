@@ -25,7 +25,6 @@ import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
-import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
@@ -115,7 +114,7 @@ class WeatherApiApplicationTest {
     ObservationProvider observationProvider;
 
     @MockBean
-    ObservationCache observationCache;
+    Cache<Observation> observationCache;
 
     @MockBean
     AlertProvider alertProvider;
