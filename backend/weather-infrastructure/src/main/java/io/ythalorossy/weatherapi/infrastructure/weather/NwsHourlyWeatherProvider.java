@@ -13,8 +13,6 @@ import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
@@ -22,7 +20,6 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.function.Supplier;
 
 /**
  * NWS adapter for {@link HourlyWeatherProvider}.
@@ -83,7 +80,7 @@ public class NwsHourlyWeatherProvider implements HourlyWeatherProvider {
         }
 
         // Step 2: hourly forecast from the gridpoint
-        GridpointHourlyForecastResponse forecast = invoke(
+        GridpointHourlyForecastResponse forecast = NwsClient.invoke(
                 () -> client.get()
                         .uri("/gridpoints/{gridId}/{x},{y}/forecast/hourly",
                                 props.gridId(), props.gridX(), props.gridY())
@@ -126,17 +123,5 @@ public class NwsHourlyWeatherProvider implements HourlyWeatherProvider {
                 p.shortForecast(),
                 p.isDaytime()
         );
-    }
-
-    private static <T> T invoke(Supplier<T> call, String op, Location location) {
-        try {
-            return call.get();
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call " + op + " for " + location.displayName(), e);
-        }
     }
 }

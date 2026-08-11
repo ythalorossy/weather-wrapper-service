@@ -13,14 +13,11 @@ import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /**
  * NWS (api.weather.gov) adapter for {@link WeatherProvider}.
@@ -84,7 +81,7 @@ public class NwsWeatherProvider implements WeatherProvider {
         }
 
         // Step 2: forecast from the gridpoint
-        GridpointForecastResponse forecast = invoke(
+        GridpointForecastResponse forecast = NwsClient.invoke(
                 () -> client.get()
                         .uri("/gridpoints/{gridId}/{x},{y}/forecast",
                                 props.gridId(), props.gridX(), props.gridY())
@@ -106,24 +103,6 @@ public class NwsWeatherProvider implements WeatherProvider {
                 .toList();
 
         return new WeatherForecast(periods, Instant.now(), SOURCE);
-    }
-
-    /**
-     * Invokes the supplied HTTP call and translates client/server errors into
-     * {@link WeatherProviderUnavailableException}. The supplier pattern lets us
-     * catch exceptions from the actual {@code .retrieve().body()} chain (which
-     * throws before the body is returned).
-     */
-    private static <T> T invoke(Supplier<T> call, String op, Location location) {
-        try {
-            return call.get();
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call " + op + " for " + location.displayName(), e);
-        }
     }
 
     private static ForecastPeriod toDomainPeriod(GridpointForecastResponse.Period p) {
