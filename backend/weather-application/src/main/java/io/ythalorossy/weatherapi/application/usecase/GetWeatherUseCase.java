@@ -3,7 +3,7 @@ package io.ythalorossy.weatherapi.application.usecase;
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.Cache;
+import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 
 import java.time.Duration;
@@ -17,8 +17,8 @@ import java.util.Objects;
  * <ol>
  *   <li>Geocoding cache: city name → {@link Location}, with negative entries
  *       (city not found) cached briefly. Both positive and negative entries
- *       live behind the shared {@link LocationResolver}; positive TTL is long
- *       (days), negative TTL is short (seconds-to-minutes).</li>
+ *       live behind {@code LocationCache}; positive TTL is long (days),
+ *       negative TTL is short (seconds-to-minutes).</li>
  *   <li>Weather cache: location → {@link WeatherForecast}. TTL configurable,
  *       default 12 h.</li>
  * </ol>
@@ -26,44 +26,55 @@ import java.util.Objects;
  * <p>This class is plain Java (no Spring annotations). It is instantiated by a
  * {@code @Configuration} bean in the API module so the application layer stays
  * framework-agnostic.
+ *
+ * <p>Returns just the resolved {@link Location}; the forecast is written
+ * through to the cache but not returned here. Controllers that need it call
+ * the provider again or read the cache themselves.
  */
 public class GetWeatherUseCase {
 
-    private static final String WEATHER_KEY_PREFIX = "weather:";
-
     private final WeatherProvider weatherProvider;
-    private final Cache<WeatherForecast> weatherCache;
+    private final WeatherCache weatherCache;
     private final LocationResolver locationResolver;
     private final Duration weatherCacheTtl;
 
     public GetWeatherUseCase(
             WeatherProvider weatherProvider,
-            Cache<WeatherForecast> weatherCache,
+            WeatherCache weatherCache,
             LocationResolver locationResolver,
             Duration weatherCacheTtl) {
         this.weatherProvider = Objects.requireNonNull(weatherProvider, "weatherProvider");
         this.weatherCache = Objects.requireNonNull(weatherCache, "weatherCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        CacheAside.requirePositive(weatherCacheTtl, "weatherCacheTtl");
-        this.weatherCacheTtl = weatherCacheTtl;
+        this.weatherCacheTtl = requirePositive(weatherCacheTtl, "weatherCacheTtl");
     }
 
     /**
-     * Executes the weather query for the given city name.
+     * Resolves the city and populates the weather cache (cache-aside).
      *
      * @param cityName user-entered city (e.g., "Arlington, VA"); must not be null or blank
-     * @return the resolved location plus the forecast (cached or freshly fetched)
+     * @return the resolved location
      * @throws LocationNotFoundException if the city cannot be resolved to a location
-     * @throws IllegalArgumentException  if {@code cityName} is null or blank
      */
-    public WeatherQueryResult execute(String cityName) {
+    public Location execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String weatherKey = location.weatherCacheKey()
-                .substring(WEATHER_KEY_PREFIX.length());
-        WeatherForecast forecast = CacheAside.getOrLoad(
-                weatherCache, weatherKey, weatherCacheTtl,
-                () -> weatherProvider.getForecast(location));
-        return new WeatherQueryResult(location, forecast);
+        String weatherKey = location.cacheKey("weather");
+        var cachedForecast = weatherCache.get(weatherKey);
+        if (cachedForecast.isPresent()) {
+            return location;
+        }
+
+        WeatherForecast forecast = weatherProvider.getForecast(location);
+        weatherCache.put(weatherKey, forecast, weatherCacheTtl);
+        return location;
+    }
+
+    private static Duration requirePositive(Duration ttl, String name) {
+        Objects.requireNonNull(ttl, name);
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException(name + " must be positive: " + ttl);
+        }
+        return ttl;
     }
 }

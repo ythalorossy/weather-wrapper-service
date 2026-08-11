@@ -2,11 +2,12 @@ package io.ythalorossy.weatherapi.application.usecase;
 
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
-import io.ythalorossy.weatherapi.domain.port.Cache;
+import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 
 import java.time.Duration;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * Use case: current conditions at the nearest NWS observation station to a city.
@@ -16,37 +17,45 @@ import java.util.Objects;
  */
 public class GetCurrentConditionsUseCase {
 
-    private static final String OBS_KEY_PREFIX = "obs:";
-
     private final ObservationProvider observationProvider;
-    private final Cache<Observation> observationCache;
+    private final ObservationCache observationCache;
     private final LocationResolver locationResolver;
     private final Duration observationCacheTtl;
 
     public GetCurrentConditionsUseCase(
             ObservationProvider observationProvider,
-            Cache<Observation> observationCache,
+            ObservationCache observationCache,
             LocationResolver locationResolver,
             Duration observationCacheTtl) {
         this.observationProvider = Objects.requireNonNull(observationProvider, "observationProvider");
         this.observationCache = Objects.requireNonNull(observationCache, "observationCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        CacheAside.requirePositive(observationCacheTtl, "observationCacheTtl");
-        this.observationCacheTtl = observationCacheTtl;
+        this.observationCacheTtl = requirePositive(observationCacheTtl, "observationCacheTtl");
     }
 
     /**
-     * @return the latest observation
-     * @throws IllegalStateException if no nearby station is available
+     * @return the latest observation, or empty if no nearby station or upstream
+     *         could not be reached.
      */
-    public Observation execute(String cityName) {
+    public Optional<Observation> execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
 
-        String obsKey = location.observationCacheKey().substring(OBS_KEY_PREFIX.length());
-        return CacheAside.getOrLoad(
-                observationCache, obsKey, observationCacheTtl,
-                () -> observationProvider.getCurrentObservation(location)
-                        .orElseThrow(() -> new IllegalStateException(
-                                "Observation provider returned empty for " + location.displayName())));
+        String key = location.cacheKey("obs");
+        Optional<Observation> cached = observationCache.get(key);
+        if (cached.isPresent()) return cached;
+
+        Optional<Observation> fresh = observationProvider.getCurrentObservation(location);
+        if (fresh.isEmpty()) return Optional.empty();
+
+        observationCache.put(key, fresh.get(), observationCacheTtl);
+        return fresh;
+    }
+
+    private static Duration requirePositive(Duration ttl, String name) {
+        Objects.requireNonNull(ttl, name);
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException(name + " must be positive: " + ttl);
+        }
+        return ttl;
     }
 }

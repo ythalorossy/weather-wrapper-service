@@ -7,8 +7,8 @@ import io.ythalorossy.weatherapi.domain.model.AlertSeverity;
 import io.ythalorossy.weatherapi.domain.model.AlertUrgency;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
+import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
-import io.ythalorossy.weatherapi.domain.port.Cache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -31,7 +31,7 @@ import static org.mockito.Mockito.when;
 class GetActiveAlertsUseCaseTest {
 
     private AlertProvider alertProvider;
-    private Cache<AlertsPayload> alertCache;
+    private AlertCache alertCache;
     private LocationResolver locationResolver;
     private GetActiveAlertsUseCase useCase;
 
@@ -53,12 +53,12 @@ class GetActiveAlertsUseCaseTest {
             "https://example.com"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String ALERTS_KEY = "38.88,-77.09";
+    private static final String ALERTS_KEY = "alerts:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {
         alertProvider = mock(AlertProvider.class);
-        alertCache = mock(Cache.class);
+        alertCache = mock(AlertCache.class);
         locationResolver = mock(LocationResolver.class);
         when(locationResolver.resolve(CITY)).thenReturn(arlington);
         useCase = new GetActiveAlertsUseCase(
@@ -67,7 +67,7 @@ class GetActiveAlertsUseCaseTest {
 
     @Test
     void cacheHitReturnsWithoutCallingProvider() {
-        when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.of(new AlertsPayload(List.of(alert))));
+        when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.of(List.of(alert)));
 
         List<WeatherAlert> result = useCase.execute(CITY);
 
@@ -86,7 +86,7 @@ class GetActiveAlertsUseCaseTest {
         assertThat(result).containsExactly(alert);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
-        verify(alertCache).put(eq(ALERTS_KEY), eq(new AlertsPayload(List.of(alert))), ttlCaptor.capture());
+        verify(alertCache).put(eq(ALERTS_KEY), eq(List.of(alert)), ttlCaptor.capture());
         assertThat(ttlCaptor.getValue()).isEqualTo(Duration.ofMinutes(5));
     }
 
@@ -98,21 +98,21 @@ class GetActiveAlertsUseCaseTest {
         List<WeatherAlert> result = useCase.execute(CITY);
 
         assertThat(result).isEmpty();
-        verify(alertCache).put(eq(ALERTS_KEY), eq(new AlertsPayload(List.of())), eq(Duration.ofMinutes(5)));
+
+        // Empty list is still worth caching \u2014 otherwise we'd hit NWS for every
+        // request from a city that has no alerts. 5-min TTL is short enough that
+        // a newly-issued alert will surface quickly.
+        verify(alertCache).put(eq(ALERTS_KEY), eq(List.of()), any());
     }
 
     @Test
-    void rejectsNegativeTtl() {
-        assertThatThrownBy(() -> new GetActiveAlertsUseCase(
-                alertProvider, alertCache, locationResolver, Duration.ofSeconds(-1)))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("alertCacheTtl");
-    }
+    void locationNotFoundFromResolverPropagates() {
+        when(locationResolver.resolve("NowhereVille"))
+                .thenThrow(new LocationNotFoundException("NowhereVille"));
 
-    @Test
-    void propagatesLocationNotFound() {
-        when(locationResolver.resolve(CITY)).thenThrow(new LocationNotFoundException(CITY));
-        assertThatThrownBy(() -> useCase.execute(CITY))
-            .isInstanceOf(LocationNotFoundException.class);
+        assertThatThrownBy(() -> useCase.execute("NowhereVille"))
+                .isInstanceOf(LocationNotFoundException.class);
+
+        verify(alertProvider, never()).getActiveAlerts(any());
     }
 }

@@ -15,12 +15,13 @@ import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
-import io.ythalorossy.weatherapi.application.usecase.WeatherQueryResult;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
+import io.ythalorossy.weatherapi.domain.port.WeatherCache;
+import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ProblemDetail;
@@ -38,16 +39,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class WeatherController {
 
     private final GetWeatherUseCase getWeather;
+    private final WeatherCache weatherCache;
+    private final WeatherProvider weatherProvider;
     private final GetHourlyForecastUseCase getHourlyWeather;
     private final GetLocationMetadataUseCase getLocationMetadata;
     private final GetAfdUseCase getAfd;
 
     public WeatherController(
             GetWeatherUseCase getWeather,
+            WeatherCache weatherCache,
+            WeatherProvider weatherProvider,
             GetHourlyForecastUseCase getHourlyWeather,
             GetLocationMetadataUseCase getLocationMetadata,
             GetAfdUseCase getAfd) {
         this.getWeather = getWeather;
+        this.weatherCache = weatherCache;
+        this.weatherProvider = weatherProvider;
         this.getHourlyWeather = getHourlyWeather;
         this.getLocationMetadata = getLocationMetadata;
         this.getAfd = getAfd;
@@ -81,8 +88,9 @@ public class WeatherController {
                     example = "Arlington, VA",
                     required = true)
             @RequestParam("city") @NotBlank String city) {
-        WeatherQueryResult result = getWeather.execute(city);
-        return ResponseEntity.ok(toResponse(city, result));
+        Location location = getWeather.execute(city);
+        WeatherForecast fc = forecastFor(location);
+        return ResponseEntity.ok(toResponse(city, location, fc));
     }
 
     @GetMapping("/hourly")
@@ -110,9 +118,9 @@ public class WeatherController {
             @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
-        WeatherQueryResult result = getWeather.execute(city);
+        Location location = getWeather.execute(city);
         HourlyForecast hourly = getHourlyWeather.execute(city);
-        return ResponseEntity.ok(toHourlyResponse(city, result, hourly));
+        return ResponseEntity.ok(toHourlyResponse(city, location, hourly));
     }
 
     @GetMapping("/metadata")
@@ -141,10 +149,10 @@ public class WeatherController {
             @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
-        WeatherQueryResult result = getWeather.execute(city);
+        Location location = getWeather.execute(city);
         io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta =
                 getLocationMetadata.execute(city);
-        return ResponseEntity.ok(toMetadataResponse(city, result, meta));
+        return ResponseEntity.ok(toMetadataResponse(city, location, meta));
     }
 
     @GetMapping("/forecast/discussion")
@@ -178,9 +186,12 @@ public class WeatherController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    private static WeatherResponse toResponse(String requestedCity, WeatherQueryResult result) {
-        Location loc = result.location();
-        WeatherForecast fc = result.forecast();
+    private WeatherForecast forecastFor(Location location) {
+        return weatherCache.get(location.cacheKey("weather"))
+                .orElseGet(() -> weatherProvider.getForecast(location));
+    }
+
+    private static WeatherResponse toResponse(String requestedCity, Location loc, WeatherForecast fc) {
         return new WeatherResponse(
                 requestedCity,
                 new WeatherResponse.LocationView(loc.latitude(), loc.longitude(), loc.displayName()),
@@ -193,9 +204,8 @@ public class WeatherController {
     }
 
     private static HourlyWeatherResponse toHourlyResponse(String requestedCity,
-                                                         WeatherQueryResult result,
-                                                         HourlyForecast hourly) {
-        Location loc = result.location();
+                                                          Location loc,
+                                                          HourlyForecast hourly) {
         HourlyWeatherResponse.ForecastView forecastView = new HourlyWeatherResponse.ForecastView(
                 hourly.generatedAt(),
                 hourly.source(),
@@ -205,15 +215,14 @@ public class WeatherController {
         );
         return new HourlyWeatherResponse(
                 requestedCity,
-                new HourlyWeatherResponse.LocationView(loc.latitude(), loc.longitude(), loc.displayName()),
+                new WeatherResponse.LocationView(loc.latitude(), loc.longitude(), loc.displayName()),
                 forecastView
         );
     }
 
     private static LocationMetadataResponse toMetadataResponse(String requestedCity,
-                                                              WeatherQueryResult result,
+                                                              Location loc,
                                                               io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta) {
-        Location loc = result.location();
         LocationMetadataResponse.SunView sunView = meta.sunTimes()
                 .map(LocationMetadataResponse.SunView::from)
                 .orElse(null);
@@ -242,7 +251,7 @@ public class WeatherController {
         Temperature t = p.temperature();
         return new HourlyWeatherResponse.PeriodView(
                 p.startTime(),
-                new HourlyWeatherResponse.TemperatureView(t.value(), t.unit().name(), t.formatted()),
+                new WeatherResponse.TemperatureView(t.value(), t.unit().name(), t.formatted()),
                 p.windSpeed(),
                 p.windDirection(),
                 p.shortForecast(),

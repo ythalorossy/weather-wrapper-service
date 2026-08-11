@@ -5,7 +5,7 @@ import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.Cache;
+import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 class GetWeatherUseCaseTest {
 
     private WeatherProvider weather;
-    private Cache<WeatherForecast> weatherCache;
+    private WeatherCache weatherCache;
     private LocationResolver locationResolver;
     private GetWeatherUseCase useCase;
 
@@ -40,12 +40,12 @@ class GetWeatherUseCaseTest {
             "NWS"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String WEATHER_KEY = "38.88,-77.09";
+    private static final String WEATHER_KEY = "weather:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {
         weather = mock(WeatherProvider.class);
-        weatherCache = mock(Cache.class);
+        weatherCache = mock(WeatherCache.class);
         locationResolver = mock(LocationResolver.class);
         when(locationResolver.resolve(CITY)).thenReturn(arlington);
         useCase = new GetWeatherUseCase(
@@ -59,10 +59,9 @@ class GetWeatherUseCaseTest {
         when(weatherCache.get(WEATHER_KEY))
                 .thenReturn(java.util.Optional.of(forecast));
 
-        WeatherQueryResult result = useCase.execute(CITY);
+        Location location = useCase.execute(CITY);
 
-        assertThat(result.location()).isEqualTo(arlington);
-        assertThat(result.forecast()).isEqualTo(forecast);
+        assertThat(location).isEqualTo(arlington);
         verify(weather, never()).getForecast(any());
         verify(weatherCache, never()).put(anyString(), any(), any());
     }
@@ -74,9 +73,9 @@ class GetWeatherUseCaseTest {
         when(weatherCache.get(WEATHER_KEY)).thenReturn(java.util.Optional.empty());
         when(weather.getForecast(arlington)).thenReturn(forecast);
 
-        WeatherQueryResult result = useCase.execute(CITY);
+        Location location = useCase.execute(CITY);
 
-        assertThat(result.forecast()).isEqualTo(forecast);
+        assertThat(location).isEqualTo(arlington);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
         verify(weatherCache).put(eq(WEATHER_KEY), eq(forecast), ttlCaptor.capture());
@@ -113,10 +112,13 @@ class GetWeatherUseCaseTest {
     }
 
     @Test
-    void constructorRejectsNegativeWeatherTtl() {
+    void constructorRejectsNonPositiveWeatherTtl() {
         assertThatThrownBy(() -> new GetWeatherUseCase(
-                weather, weatherCache, locationResolver, Duration.ofSeconds(-1)))
+                weather, weatherCache, locationResolver, Duration.ZERO))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("weatherCacheTtl");
+        assertThatThrownBy(() -> new GetWeatherUseCase(
+                weather, weatherCache, locationResolver, Duration.ofSeconds(-1)))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 }

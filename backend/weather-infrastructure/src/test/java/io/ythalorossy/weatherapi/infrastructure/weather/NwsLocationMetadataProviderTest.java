@@ -7,6 +7,7 @@ import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
 import io.ythalorossy.weatherapi.infrastructure.InfrastructureTestConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -41,7 +42,15 @@ class NwsLocationMetadataProviderTest {
     @Autowired
     NwsLocationMetadataProvider provider;
 
+    @Autowired
+    NwsPointsService pointsService;
+
     private final Location location = new Location(38.8816, -77.0910, "Arlington, VA");
+
+    @BeforeEach
+    void resetMemo() {
+        pointsService.clearMemo();
+    }
 
     @Test
     void resolvesOfficeIdFromForecastOfficeUrlAndBuildsWeatherOffice() {

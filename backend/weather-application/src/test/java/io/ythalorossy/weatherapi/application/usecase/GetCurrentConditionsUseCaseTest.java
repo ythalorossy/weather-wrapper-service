@@ -3,7 +3,7 @@ package io.ythalorossy.weatherapi.application.usecase;
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
-import io.ythalorossy.weatherapi.domain.port.Cache;
+import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,7 +26,7 @@ import static org.mockito.Mockito.when;
 class GetCurrentConditionsUseCaseTest {
 
     private ObservationProvider observationProvider;
-    private Cache<Observation> observationCache;
+    private ObservationCache observationCache;
     private LocationResolver locationResolver;
     private GetCurrentConditionsUseCase useCase;
 
@@ -38,12 +38,12 @@ class GetCurrentConditionsUseCaseTest {
             78.4, 71.6, 5.2, 315, "NW", 83.5, 30.02, "Cloudy"
     );
     private static final String CITY = "Arlington, VA";
-    private static final String OBS_KEY = "38.88,-77.09";
+    private static final String OBS_KEY = "obs:38.8816,-77.0910";
 
     @BeforeEach
     void setUp() {
         observationProvider = mock(ObservationProvider.class);
-        observationCache = mock(Cache.class);
+        observationCache = mock(ObservationCache.class);
         locationResolver = mock(LocationResolver.class);
         when(locationResolver.resolve(CITY)).thenReturn(arlington);
         useCase = new GetCurrentConditionsUseCase(
@@ -55,9 +55,9 @@ class GetCurrentConditionsUseCaseTest {
     void cacheHitReturnsWithoutCallingProvider() {
         when(observationCache.get(OBS_KEY)).thenReturn(Optional.of(obs));
 
-        Observation result = useCase.execute(CITY);
+        Optional<Observation> result = useCase.execute(CITY);
 
-        assertThat(result).isEqualTo(obs);
+        assertThat(result).contains(obs);
         verify(observationProvider, never()).getCurrentObservation(any());
         verify(observationCache, never()).put(anyString(), any(), any());
     }
@@ -67,9 +67,9 @@ class GetCurrentConditionsUseCaseTest {
         when(observationCache.get(OBS_KEY)).thenReturn(Optional.empty());
         when(observationProvider.getCurrentObservation(arlington)).thenReturn(Optional.of(obs));
 
-        Observation result = useCase.execute(CITY);
+        Optional<Observation> result = useCase.execute(CITY);
 
-        assertThat(result).isEqualTo(obs);
+        assertThat(result).contains(obs);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
         verify(observationCache).put(eq(OBS_KEY), eq(obs), ttlCaptor.capture());
@@ -77,13 +77,13 @@ class GetCurrentConditionsUseCaseTest {
     }
 
     @Test
-    void emptyResultFromProviderThrowsAndDoesNotWriteToCache() {
+    void emptyResultFromProviderDoesNotWriteToCache() {
         when(observationCache.get(OBS_KEY)).thenReturn(Optional.empty());
         when(observationProvider.getCurrentObservation(arlington)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> useCase.execute(CITY))
-                .isInstanceOf(IllegalStateException.class);
+        Optional<Observation> result = useCase.execute(CITY);
 
+        assertThat(result).isEmpty();
         verify(observationCache, never()).put(anyString(), any(), any());
     }
 

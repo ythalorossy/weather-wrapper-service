@@ -14,18 +14,20 @@ import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
-import io.ythalorossy.weatherapi.application.usecase.AlertsPayload;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
+import io.ythalorossy.weatherapi.domain.port.AlertCache;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
+import io.ythalorossy.weatherapi.domain.port.AfdCache;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
-import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
+import io.ythalorossy.weatherapi.domain.port.HourlyForecastCache;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
-import io.ythalorossy.weatherapi.domain.model.Location;
-import io.ythalorossy.weatherapi.domain.port.Cache;
+import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
+import io.ythalorossy.weatherapi.domain.port.ObservationCache;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
+import io.ythalorossy.weatherapi.domain.port.WeatherCache;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -42,6 +44,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
+import io.ythalorossy.weatherapi.domain.port.SunTimesCache;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -95,16 +98,16 @@ class WeatherApiApplicationTest {
     WeatherProvider weatherProvider;
 
     @MockBean
-    Cache<WeatherForecast> weatherCache;
+    WeatherCache weatherCache;
 
     @MockBean
-    Cache<Location> locationCache;
+    LocationCache locationCache;
 
     @MockBean
     HourlyWeatherProvider hourlyWeatherProvider;
 
     @MockBean
-    Cache<HourlyForecast> hourlyForecastCache;
+    HourlyForecastCache hourlyForecastCache;
 
     @MockBean
     LocationMetadataProvider locationMetadataProvider;
@@ -113,29 +116,29 @@ class WeatherApiApplicationTest {
     ObservationProvider observationProvider;
 
     @MockBean
-    Cache<Observation> observationCache;
+    ObservationCache observationCache;
 
     @MockBean
     AlertProvider alertProvider;
 
     @MockBean
-    Cache<AlertsPayload> alertCache;
+    AlertCache alertCache;
 
     @MockBean
     SunTimesProvider sunTimesProvider;
 
     @MockBean
-    Cache<SunTimes> sunTimesCache;
+    SunTimesCache sunTimesCache;
 
     @MockBean
     AreaForecastDiscussionProvider afdProvider;
 
     @MockBean
-    Cache<AfdProduct> afdCache;
+    AfdCache afdCache;
 
     private static final String CITY = "Arlington, VA";
     private static final String GEO_KEY = "geo:arlington, va";
-    private static final String CACHE_KEY = "38.88,-77.09";
+    private static final String CACHE_KEY = "weather:38.8816,-77.0910";
     private final Location location = new Location(38.8816, -77.0910, "Arlington, Arlington County, Virginia, United States");
     private final WeatherForecast forecast = new WeatherForecast(
             List.of(new ForecastPeriod("Today", Temperature.fahrenheit(85), "5 mph", "NW",
@@ -197,7 +200,7 @@ class WeatherApiApplicationTest {
     }
 
     @Test
-    void getWeatherReturns200OnGeoCacheHitOnly() throws Exception {
+    void getWeatherReturns200OnLocationCacheHitOnly() throws Exception {
         // Location cached, weather not — use case should still resolve location from cache
         // and only hit NWS for the forecast.
         when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(location));
@@ -309,8 +312,8 @@ class WeatherApiApplicationTest {
     @Test
     void getHourlyForecastReturnsHourlyCacheHitWithoutCallingProvider() throws Exception {
         when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(location));
-        when(weatherCache.get("38.88,-77.09")).thenReturn(Optional.of(forecast));
-        when(hourlyForecastCache.get("38.88,-77.09")).thenReturn(Optional.of(hourly));
+        when(weatherCache.get("weather:38.8816,-77.0910")).thenReturn(Optional.of(forecast));
+        when(hourlyForecastCache.get("hourly:38.8816,-77.0910")).thenReturn(Optional.of(hourly));
 
         mvc.perform(get("/api/v1/weather/hourly").param("city", CITY))
                 .andExpect(status().isOk())

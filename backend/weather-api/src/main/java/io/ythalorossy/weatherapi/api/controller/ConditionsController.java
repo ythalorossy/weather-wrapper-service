@@ -11,7 +11,6 @@ import io.ythalorossy.weatherapi.api.dto.CurrentConditionsResponse;
 import io.ythalorossy.weatherapi.api.dto.WeatherResponse;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
-import io.ythalorossy.weatherapi.application.usecase.WeatherQueryResult;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import jakarta.validation.constraints.NotBlank;
@@ -22,6 +21,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Optional;
 
 /**
  * Current conditions at the nearest NWS observation station.
@@ -73,13 +74,10 @@ public class ConditionsController {
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
         // Reuse the resolver-backed daily use case just for the resolved Location.
-        WeatherQueryResult geo = getWeather.execute(city);
-        Location location = geo.location();
+        Location location = getWeather.execute(city);
+        Optional<Observation> obs = getCurrentConditions.execute(city);
 
-        Observation obs;
-        try {
-            obs = getCurrentConditions.execute(city);
-        } catch (IllegalStateException e) {
+        if (obs.isEmpty()) {
             return ResponseEntity.ok(new CurrentConditionsResponse(
                     city,
                     new WeatherResponse.LocationView(location.latitude(), location.longitude(), location.displayName()),
@@ -90,7 +88,7 @@ public class ConditionsController {
         return ResponseEntity.ok(new CurrentConditionsResponse(
                 city,
                 new WeatherResponse.LocationView(location.latitude(), location.longitude(), location.displayName()),
-                CurrentConditionsResponse.ObservationView.from(obs)
+                CurrentConditionsResponse.ObservationView.from(obs.get())
         ));
     }
 }

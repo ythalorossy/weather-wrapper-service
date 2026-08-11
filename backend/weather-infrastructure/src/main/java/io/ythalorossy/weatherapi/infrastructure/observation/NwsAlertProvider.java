@@ -11,11 +11,10 @@ import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.infrastructure.observation.dto.AlertsActiveResponse;
+import io.ythalorossy.weatherapi.infrastructure.weather.NwsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
@@ -23,7 +22,6 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Supplier;
 
 /**
  * NWS adapter for {@link AlertProvider}. Calls
@@ -60,7 +58,7 @@ public class NwsAlertProvider implements AlertProvider {
     }
 
     private List<WeatherAlert> doFetch(Location location) {
-        AlertsActiveResponse response = invoke(
+        AlertsActiveResponse response = NwsClient.invoke(
                 () -> client.get()
                         .uri(uriBuilder -> uriBuilder
                                 .path("/alerts/active")
@@ -129,17 +127,5 @@ public class NwsAlertProvider implements AlertProvider {
         if (s == null) return AlertCategory.Unknown;
         try { return AlertCategory.valueOf(s); }
         catch (IllegalArgumentException e) { return AlertCategory.Unknown; }
-    }
-
-    private static <T> T invoke(Supplier<T> call, String op, Location location) {
-        try {
-            return call.get();
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    op + " returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call " + op + " for " + location.displayName(), e);
-        }
     }
 }
