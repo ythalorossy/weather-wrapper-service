@@ -2,8 +2,8 @@ package io.ythalorossy.weatherapi.application.usecase;
 
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
-import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -24,7 +24,7 @@ import static org.mockito.Mockito.when;
 class LocationResolverTest {
 
     private GeocodingProvider geocoding;
-    private LocationCache locationCache;
+    private Cache<Location> locationCache;
     private LocationResolver resolver;
 
     private final Location arlington = new Location(38.8816, -77.0910, "Arlington, VA");
@@ -34,7 +34,7 @@ class LocationResolverTest {
     @BeforeEach
     void setUp() {
         geocoding = mock(GeocodingProvider.class);
-        locationCache = mock(LocationCache.class);
+        locationCache = mock(Cache.class);
         resolver = new LocationResolver(
                 geocoding, locationCache, Duration.ofDays(30), Duration.ofSeconds(60));
     }

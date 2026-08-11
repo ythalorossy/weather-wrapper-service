@@ -81,4 +81,35 @@ public class RedisJsonCache<V> implements Cache<V> {
                      prefix, key, e.getMessage());
         }
     }
+
+    private String absentKey(String key) {
+        return prefix + ":absent:" + key;
+    }
+
+    @Override
+    public boolean isAbsent(String key) {
+        Objects.requireNonNull(key, "key");
+        try {
+            return Boolean.TRUE.equals(redis.opsForValue().get(absentKey(key)));
+        } catch (Exception e) {
+            log.warn("Redis GET (absent) failed for {} cache key '{}': {}",
+                     prefix, key, e.getMessage());
+            return false;
+        }
+    }
+
+    @Override
+    public void markAbsent(String key, Duration ttl) {
+        Objects.requireNonNull(key, "key");
+        Objects.requireNonNull(ttl, "ttl");
+        if (ttl.isZero() || ttl.isNegative()) {
+            throw new IllegalArgumentException("ttl must be positive: " + ttl);
+        }
+        try {
+            redis.opsForValue().set(absentKey(key), "1", ttl);
+        } catch (Exception e) {
+            log.warn("Redis SET (absent) failed for {} cache key '{}': {}",
+                     prefix, key, e.getMessage());
+        }
+    }
 }

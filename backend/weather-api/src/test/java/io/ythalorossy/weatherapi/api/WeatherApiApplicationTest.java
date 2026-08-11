@@ -22,7 +22,8 @@ import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
-import io.ythalorossy.weatherapi.domain.port.LocationCache;
+import io.ythalorossy.weatherapi.domain.model.Location;
+import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
@@ -97,7 +98,7 @@ class WeatherApiApplicationTest {
     Cache<WeatherForecast> weatherCache;
 
     @MockBean
-    LocationCache locationCache;
+    Cache<Location> locationCache;
 
     @MockBean
     HourlyWeatherProvider hourlyWeatherProvider;

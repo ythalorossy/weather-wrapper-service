@@ -13,6 +13,7 @@ import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
 import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
+import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
@@ -21,7 +22,6 @@ import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
-import io.ythalorossy.weatherapi.domain.port.LocationCache;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
@@ -43,9 +43,17 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class UseCaseConfig {
 
     @Bean
+    public Cache<Location> locationCache(
+            StringRedisTemplate redis,
+            ObjectMapper mapper,
+            MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, "geo", Location.class, meters);
+    }
+
+    @Bean
     public LocationResolver locationResolver(
             GeocodingProvider geocodingProvider,
-            LocationCache locationCache,
+            Cache<Location> locationCache,
             WeatherProperties properties) {
         return new LocationResolver(
                 geocodingProvider,
