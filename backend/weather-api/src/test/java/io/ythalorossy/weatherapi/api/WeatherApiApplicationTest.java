@@ -197,7 +197,7 @@ class WeatherApiApplicationTest {
     }
 
     @Test
-    void getWeatherReturns200OnLocationCacheHitOnly() throws Exception {
+    void getWeatherReturns200OnGeoCacheHitOnly() throws Exception {
         // Location cached, weather not — use case should still resolve location from cache
         // and only hit NWS for the forecast.
         when(locationCache.get(GEO_KEY)).thenReturn(Optional.of(location));

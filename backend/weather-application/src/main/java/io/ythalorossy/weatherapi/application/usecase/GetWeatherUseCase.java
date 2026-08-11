@@ -17,8 +17,8 @@ import java.util.Objects;
  * <ol>
  *   <li>Geocoding cache: city name → {@link Location}, with negative entries
  *       (city not found) cached briefly. Both positive and negative entries
- *       live behind {@code LocationCache}; positive TTL is long (days),
- *       negative TTL is short (seconds-to-minutes).</li>
+ *       live behind the shared {@link LocationResolver}; positive TTL is long
+ *       (days), negative TTL is short (seconds-to-minutes).</li>
  *   <li>Weather cache: location → {@link WeatherForecast}. TTL configurable,
  *       default 12 h.</li>
  * </ol>
