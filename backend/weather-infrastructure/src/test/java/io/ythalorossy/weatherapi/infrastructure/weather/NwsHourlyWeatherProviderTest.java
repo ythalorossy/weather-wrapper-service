@@ -32,8 +32,8 @@ class NwsHourlyWeatherProviderTest {
     @DynamicPropertySource
     static void overrideBaseUrl(DynamicPropertyRegistry registry) {
         wireMock.start();
-        registry.add("weather.provider.base-url", wireMock::baseUrl);
-        registry.add("weather.provider.timeout", () -> "5s");
+        registry.add("weather.provider-base-url", wireMock::baseUrl);
+        registry.add("weather.provider-timeout", () -> "5s");
     }
 
     @AfterAll

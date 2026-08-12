@@ -57,8 +57,8 @@ public class UseCaseConfig {
         return new LocationResolver(
                 geocodingProvider,
                 locationCache,
-                properties.getGeocoding().getCache().getTtl(),
-                properties.getGeocoding().getCache().getAbsentTtl()
+                properties.getGeocodingCacheTtl(),
+                properties.getGeocodingAbsentTtl()
         );
     }
 
@@ -108,7 +108,7 @@ public class UseCaseConfig {
                 weatherProvider,
                 weatherCache,
                 locationResolver,
-                properties.getCache().getTtl()
+                properties.getCacheTtl()
         );
     }
 
@@ -124,7 +124,7 @@ public class UseCaseConfig {
                 hourlyWeatherProvider,
                 hourlyForecastCache,
                 locationResolver,
-                properties.getCache().getTtl()
+                properties.getCacheTtl()
         );
     }
 
@@ -140,7 +140,7 @@ public class UseCaseConfig {
                 sunTimesCache,
                 locationResolver,
                 metadataProvider,
-                properties.getSun().getTtl()
+                properties.getSunTtl()
         );
     }
 
@@ -162,7 +162,7 @@ public class UseCaseConfig {
                 observationProvider,
                 observationCache,
                 locationResolver,
-                properties.getObservations().getTtl());
+                properties.getObservationTtl());
     }
 
     @Bean
@@ -175,7 +175,7 @@ public class UseCaseConfig {
                 alertProvider,
                 alertsCache,
                 locationResolver,
-                properties.getObservations().getAlertTtl());
+                properties.getAlertTtl());
     }
 
     @Bean
@@ -190,6 +190,6 @@ public class UseCaseConfig {
                 afdCache,
                 locationResolver,
                 metadataProvider,
-                properties.getAfd().getTtl());
+                properties.getAfdTtl());
     }
 }

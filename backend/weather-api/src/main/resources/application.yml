@@ -33,8 +33,9 @@ management:
         enabled: true
 
 weather:
-  cache:
-    ttl: 12h
+  cache-ttl: 12h
+  observation-ttl: 10m
+  alert-ttl: 5m
   provider:
     base-url: https://api.weather.gov
     user-agent: weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)
@@ -43,14 +44,10 @@ weather:
     base-url: https://nominatim.openstreetmap.org
     user-agent: weather-wrapper-service/0.1.0 (https://github.com/ythalorossy/weather-wrapper-service)
     timeout: 5s
-    cache:
-      ttl: 720h        # 30 days for positive results
-      absent-ttl: 60s  # 60 seconds for negative results ("no such city")
-  observations:
-    ttl: 10m          # current conditions: station data refreshes every 5-15 min
-    alert-ttl: 5m     # active alerts: short TTL prevents stale warnings
-  afd:
-    ttl: 30m          # Area Forecast Discussion; issued several times per day
+    cache-ttl: 720h        # 30 days for positive results
+    absent-ttl: 60s        # 60 seconds for negative results ("no such city")
+  sun-ttl: 48h
+  afd-ttl: 30m
   rate-limit:
     burst:
       capacity: 5

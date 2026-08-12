@@ -31,7 +31,7 @@ class NominatimGeocodingProviderTest {
     @DynamicPropertySource
     static void overrideBaseUrl(DynamicPropertyRegistry registry) {
         wireMock.start();
-        registry.add("weather.geocoding.base-url", wireMock::baseUrl);
+        registry.add("weather.geocoding-base-url", wireMock::baseUrl);
     }
 
     @AfterAll

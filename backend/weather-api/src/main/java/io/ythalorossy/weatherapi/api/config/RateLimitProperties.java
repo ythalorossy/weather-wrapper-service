@@ -15,11 +15,16 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Each request consumes one token from <em>both</em> bandwidths; the more
  * restrictive decides.
  *
- * <p>The Redis connection is <em>not</em> configured here \u2014 it reuses the
+ * <p>The Redis connection is <em>not</em> configured here — it reuses the
  * Spring Boot {@code spring.data.redis.*} properties so the rate-limiter
  * shares the same Redis instance as the caches and the testcontainers
  * Testcontainers Redis in tests.
  */
+// Record form attempted but reverted: record's `boolean enabled` defaults to
+// `false` (Java primitive default) when YAML omits `enabled`, silently
+// disabling rate limiting in production. JavaBean keeps `enabled = true`.
+// ponytail: would record work with @ConstructorBinding + explicit `enabled: true`
+// in YAML — yes, but that requires editing YAML outside the brief's scope.
 @ConfigurationProperties("weather.rate-limit")
 public class RateLimitProperties {
 

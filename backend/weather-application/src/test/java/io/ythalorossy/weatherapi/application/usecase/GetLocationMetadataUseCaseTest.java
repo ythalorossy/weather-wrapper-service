@@ -51,7 +51,7 @@ class GetLocationMetadataUseCaseTest {
         when(metadataProvider.getOfficeFor(arlington)).thenReturn(Optional.of(office));
         when(getSunTimes.execute("Arlington, VA")).thenReturn(Optional.of(sun));
 
-        LocationMetadataResult result = useCase.execute("Arlington, VA");
+        var result = useCase.execute("Arlington, VA");
 
         assertThat(result.office()).isEqualTo(office);
         assertThat(result.sunTimes()).contains(sun);
@@ -62,7 +62,7 @@ class GetLocationMetadataUseCaseTest {
         when(metadataProvider.getOfficeFor(arlington)).thenReturn(Optional.of(office));
         when(getSunTimes.execute("Arlington, VA")).thenReturn(Optional.empty());
 
-        LocationMetadataResult result = useCase.execute("Arlington, VA");
+        var result = useCase.execute("Arlington, VA");
 
         assertThat(result.sunTimes()).isEmpty();
         assertThat(result.office()).isEqualTo(office);

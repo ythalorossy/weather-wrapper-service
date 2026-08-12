@@ -142,8 +142,7 @@ public class WeatherController {
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
         Location location = getWeather.execute(city).location();
-        io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta =
-                getLocationMetadata.execute(city);
+        var meta = getLocationMetadata.execute(city);
         return ResponseEntity.ok(toMetadataResponse(city, location, meta));
     }
 
@@ -209,7 +208,7 @@ public class WeatherController {
 
     private static LocationMetadataResponse toMetadataResponse(String requestedCity,
                                                               Location loc,
-                                                              io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta) {
+                                                              GetLocationMetadataUseCase.Result meta) {
         LocationMetadataResponse.SunView sunView = meta.sunTimes()
                 .map(LocationMetadataResponse.SunView::from)
                 .orElse(null);

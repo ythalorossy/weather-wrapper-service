@@ -23,14 +23,12 @@ public class RestClientConfig {
 
     @Bean
     public RestClient nwsRestClient(WeatherProperties props) {
-        var p = props.getProvider();
-        return build(p.getBaseUrl(), p.getUserAgent());
+        return build(props.getProviderBaseUrl(), props.getProviderUserAgent());
     }
 
     @Bean
     public RestClient nominatimRestClient(WeatherProperties props) {
-        var g = props.getGeocoding();
-        return build(g.getBaseUrl(), g.getUserAgent());
+        return build(props.getGeocodingBaseUrl(), props.getGeocodingUserAgent());
     }
 
     private RestClient build(String baseUrl, String userAgent) {

@@ -75,10 +75,10 @@ class WeatherApiApplicationTest {
      */
     @DynamicPropertySource
     static void disableUpstreamCalls(DynamicPropertyRegistry registry) {
-        registry.add("weather.geocoding.base-url", () -> "http://localhost:0");
-        registry.add("weather.provider.base-url", () -> "http://localhost:0");
-        registry.add("weather.geocoding.timeout", () -> "100ms");
-        registry.add("weather.provider.timeout", () -> "100ms");
+        registry.add("weather.geocoding-base-url", () -> "http://localhost:0");
+        registry.add("weather.provider-base-url", () -> "http://localhost:0");
+        registry.add("weather.geocoding-timeout", () -> "100ms");
+        registry.add("weather.provider-timeout", () -> "100ms");
         // Disable rate limiting in tests so multi-request tests don't hit the
         // burst bucket. Production keeps it on.
         registry.add("weather.rate-limit.enabled", () -> "false");

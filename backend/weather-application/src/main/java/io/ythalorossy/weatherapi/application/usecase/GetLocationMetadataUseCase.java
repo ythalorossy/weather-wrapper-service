@@ -35,14 +35,14 @@ public class GetLocationMetadataUseCase {
      *         the city (Nominatim miss propagated up via LocationResolver)
      * @return office + optional sun times
      */
-    public LocationMetadataResult execute(String cityName) {
-        // Resolve the city first so a "not found" bubbles up before we
-        // spend cycles on the sun calculation.
+    public Result execute(String cityName) {
         io.ythalorossy.weatherapi.domain.model.Location location = locationResolver.resolve(cityName);
         WeatherOffice office = metadataProvider
                 .getOfficeFor(location)
                 .orElseThrow(() -> new LocationNotFoundException(cityName));
         Optional<SunTimes> sun = getSunTimes.execute(cityName);
-        return new LocationMetadataResult(office, sun);
+        return new Result(office, sun);
     }
+
+    public record Result(WeatherOffice office, Optional<SunTimes> sunTimes) {}
 }

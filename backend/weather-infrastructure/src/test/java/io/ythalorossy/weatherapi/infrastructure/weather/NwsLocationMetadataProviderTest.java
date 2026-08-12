@@ -32,7 +32,7 @@ class NwsLocationMetadataProviderTest {
     @DynamicPropertySource
     static void overrideBaseUrl(DynamicPropertyRegistry registry) {
         wireMock.start();
-        registry.add("weather.provider.base-url", wireMock::baseUrl);
+        registry.add("weather.provider-base-url", wireMock::baseUrl);
     }
 
     @AfterAll
