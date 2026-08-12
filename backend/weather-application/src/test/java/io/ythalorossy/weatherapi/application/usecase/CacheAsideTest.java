@@ -44,16 +44,6 @@ class CacheAsideTest {
             .hasMessage("boom");
     }
 
-    @Test
-    void rejectsNonPositiveTtl() {
-        assertThatThrownBy(() -> CacheAside.requirePositive(Duration.ZERO, "ttl"))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("ttl must be positive");
-        assertThatThrownBy(() -> CacheAside.requirePositive(Duration.ofSeconds(-1), "ttl"))
-            .isInstanceOf(IllegalArgumentException.class)
-            .hasMessageContaining("ttl must be positive");
-    }
-
     static class InMemoryCache implements Cache<String> {
         private final java.util.Map<String, String> map = new java.util.HashMap<>();
         @Override public Optional<String> get(String key) { return Optional.ofNullable(map.get(key)); }

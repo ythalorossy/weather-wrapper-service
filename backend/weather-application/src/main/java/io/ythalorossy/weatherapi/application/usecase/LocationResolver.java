@@ -40,8 +40,6 @@ public class LocationResolver {
             Duration locationAbsentTtl) {
         this.geocodingProvider = Objects.requireNonNull(geocodingProvider, "geocodingProvider");
         this.locationCache = Objects.requireNonNull(locationCache, "locationCache");
-        CacheAside.requirePositive(locationCacheTtl, "locationCacheTtl");
-        CacheAside.requirePositive(locationAbsentTtl, "locationAbsentTtl");
         this.locationCacheTtl = locationCacheTtl;
         this.locationAbsentTtl = locationAbsentTtl;
     }

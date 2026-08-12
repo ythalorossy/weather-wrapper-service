@@ -25,7 +25,6 @@ public class GetHourlyForecastUseCase {
         this.hourlyWeatherProvider = Objects.requireNonNull(hourlyWeatherProvider, "hourlyWeatherProvider");
         this.hourlyForecastCache = Objects.requireNonNull(hourlyForecastCache, "hourlyForecastCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        CacheAside.requirePositive(hourlyCacheTtl, "hourlyCacheTtl");
         this.hourlyCacheTtl = hourlyCacheTtl;
     }
 

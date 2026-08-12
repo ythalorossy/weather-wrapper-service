@@ -16,10 +16,4 @@ public final class CacheAside {
             return value;
         });
     }
-
-    public static void requirePositive(Duration ttl, String name) {
-        if (ttl.isZero() || ttl.isNegative()) {
-            throw new IllegalArgumentException(name + " must be positive: " + ttl);
-        }
-    }
 }

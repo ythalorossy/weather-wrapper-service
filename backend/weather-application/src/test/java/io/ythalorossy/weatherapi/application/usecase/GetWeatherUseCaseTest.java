@@ -103,15 +103,4 @@ class GetWeatherUseCaseTest {
                 weather, weatherCache, null, Duration.ofHours(1)))
                 .isInstanceOf(NullPointerException.class);
     }
-
-    @Test
-    void constructorRejectsNonPositiveWeatherTtl() {
-        assertThatThrownBy(() -> new GetWeatherUseCase(
-                weather, weatherCache, locationResolver, Duration.ZERO))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("weatherCacheTtl");
-        assertThatThrownBy(() -> new GetWeatherUseCase(
-                weather, weatherCache, locationResolver, Duration.ofSeconds(-1)))
-                .isInstanceOf(IllegalArgumentException.class);
-    }
 }

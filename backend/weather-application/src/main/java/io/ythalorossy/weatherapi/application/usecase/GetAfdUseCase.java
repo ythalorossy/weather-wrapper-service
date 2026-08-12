@@ -42,7 +42,6 @@ public class GetAfdUseCase {
         this.cache = Objects.requireNonNull(cache, "cache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
         this.metadataProvider = Objects.requireNonNull(metadataProvider, "metadataProvider");
-        CacheAside.requirePositive(cacheTtl, "cacheTtl");
         this.cacheTtl = cacheTtl;
     }
 

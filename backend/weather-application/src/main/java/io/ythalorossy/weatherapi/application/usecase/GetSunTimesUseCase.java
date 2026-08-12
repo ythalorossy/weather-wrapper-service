@@ -32,7 +32,6 @@ public class GetSunTimesUseCase {
         this.sunTimesCache = Objects.requireNonNull(sunTimesCache, "sunTimesCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
         this.metadataProvider = Objects.requireNonNull(metadataProvider, "metadataProvider");
-        CacheAside.requirePositive(cacheTtl, "cacheTtl");
         this.cacheTtl = cacheTtl;
     }
 

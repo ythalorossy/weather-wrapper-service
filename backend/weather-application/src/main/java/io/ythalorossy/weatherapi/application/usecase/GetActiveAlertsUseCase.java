@@ -26,7 +26,6 @@ public class GetActiveAlertsUseCase {
         this.alertProvider = Objects.requireNonNull(alertProvider, "alertProvider");
         this.alertCache = Objects.requireNonNull(alertCache, "alertCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        CacheAside.requirePositive(alertCacheTtl, "alertCacheTtl");
         this.alertCacheTtl = alertCacheTtl;
     }
 

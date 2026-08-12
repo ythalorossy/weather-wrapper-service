@@ -25,7 +25,6 @@ public class GetCurrentConditionsUseCase {
         this.observationProvider = Objects.requireNonNull(observationProvider, "observationProvider");
         this.observationCache = Objects.requireNonNull(observationCache, "observationCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        CacheAside.requirePositive(observationCacheTtl, "observationCacheTtl");
         this.observationCacheTtl = observationCacheTtl;
     }
 

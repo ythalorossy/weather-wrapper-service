@@ -25,7 +25,6 @@ public class GetWeatherUseCase {
         this.weatherProvider = Objects.requireNonNull(weatherProvider, "weatherProvider");
         this.weatherCache = Objects.requireNonNull(weatherCache, "weatherCache");
         this.locationResolver = Objects.requireNonNull(locationResolver, "locationResolver");
-        CacheAside.requirePositive(weatherCacheTtl, "weatherCacheTtl");
         this.weatherCacheTtl = weatherCacheTtl;
     }
 
