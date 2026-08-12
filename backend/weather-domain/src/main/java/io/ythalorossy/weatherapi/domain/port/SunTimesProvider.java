@@ -5,7 +5,6 @@ import io.ythalorossy.weatherapi.domain.model.SunTimes;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -26,13 +25,4 @@ public interface SunTimesProvider {
      *         latitude (polar regions near solstice)
      */
     Optional<SunTimes> getSunTimes(Location location, LocalDate date, ZoneId zone);
-
-    default SunTimes requireSunTimes(Location location, LocalDate date, ZoneId zone) {
-        Objects.requireNonNull(location, "location");
-        Objects.requireNonNull(date, "date");
-        Objects.requireNonNull(zone, "zone");
-        return getSunTimes(location, date, zone).orElseThrow(() ->
-                new IllegalStateException("No sun times available for "
-                        + location.displayName() + " on " + date));
-    }
 }

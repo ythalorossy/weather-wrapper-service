@@ -2,7 +2,6 @@ package io.ythalorossy.weatherapi.domain.port;
 
 import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 
-import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -19,12 +18,4 @@ public interface AreaForecastDiscussionProvider {
      *         unreachable, the office has no AFD, or the body fetch failed.
      */
     Optional<AfdProduct> getLatest(String officeId);
-
-    default String requireOfficeId(String officeId) {
-        Objects.requireNonNull(officeId, "officeId");
-        if (officeId.isBlank()) {
-            throw new IllegalArgumentException("officeId must not be blank");
-        }
-        return officeId;
-    }
 }

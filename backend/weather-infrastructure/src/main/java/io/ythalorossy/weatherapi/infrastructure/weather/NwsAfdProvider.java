@@ -13,6 +13,7 @@ import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -41,7 +42,10 @@ public class NwsAfdProvider implements AreaForecastDiscussionProvider {
 
     @Override
     public Optional<AfdProduct> getLatest(String officeId) {
-        requireOfficeId(officeId);
+        Objects.requireNonNull(officeId, "officeId");
+        if (officeId.isBlank()) {
+            throw new IllegalArgumentException("officeId must not be blank");
+        }
 
         Timer.Sample sample = Timer.start(meterRegistry);
         try {
