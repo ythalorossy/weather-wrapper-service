@@ -34,6 +34,7 @@ web/
     │   ├── ForecastCard.tsx    # Single forecast period
     │   ├── HourlyList.tsx      # Hourly forecast rows
     │   ├── MetadataBar.tsx     # WFO name + NWS attribution strip
+    │   ├── RadarCard.tsx       # RainViewer iframe, lazy-loaded on click
     │   ├── CurrentConditionsCard.tsx  # Temp, wind, humidity, pressure
     │   ├── AlertsBanner.tsx    # Most-severe alert with dismiss
     │   └── AlertList.tsx       # All alerts with severity color coding
@@ -56,6 +57,7 @@ web/
 | `HourlyList` | Renders hourly forecast rows |
 | `HourlyChart` | Apache ECharts (SVG renderer) temperature line chart embedded above the HourlyList. Renders sunrise/sunset markers and daytime shading when sun metadata is available; hover reveals a tooltip; click scrolls the matching list row into view. |
 | `MetadataBar` | WFO name + NWS attribution strip |
+| `RadarCard` | RainViewer iframe, lazy-loaded on click; lat/lon-centered |
 | `CurrentConditionsCard` | Temperature, wind, humidity, pressure |
 | `AlertsBanner` | Most-severe alert with dismiss action |
 | `AlertList` | All alerts with severity color coding |

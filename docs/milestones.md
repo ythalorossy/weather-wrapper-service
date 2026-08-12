@@ -7,6 +7,7 @@
 | **M3** — Multi-location + chart polish | ✅ Done | localStorage saved locations, hand-rolled hourly temperature SVG chart |
 | **M4** — Polish & niche (optional) | ✅ Done | Radar station link, AFD endpoint + Discussion tab, Glossary tooltips |
 | **M5** — Over-engineering audit | ✅ Done | Generic `Cache<V>` port collapses 6 typed cache ports + 7 Redis adapters; NWS dedup; DTO/model shrinks; web cleanup. ~1980 LOC removed. |
+| **M6** — Radar map embed | ✅ Done | `RadarCard` with lazy iframe (RainViewer); button keeps the dashboard free of third-party scripts on first paint. |
 
 ## M1 — Forecast expansion ✅ (2026-08-08)
 
@@ -84,3 +85,14 @@ Three coordinated refactors that cut ~1980 LOC and fix a pre-existing test failu
 - Tests: 38 vitest tests still pass; `npm run build` clean.
 
 **Tests after M5:** 128 backend + 38 web = 166 passing.
+
+## M6 — Radar map embed ✅ (2026-08-12)
+
+Frontend-only slice. New component `web/src/components/RadarCard.tsx`:
+- "Show radar map" button by default; iframe (RainViewer, centered on
+  `daily.data.resolvedLocation`) mounts on click.
+- No new backend work; lat/lon already on every `WeatherResponse`.
+- M4 "KLWX radar" link in `MetadataBar` retained for the new-tab
+  affordance; both surfaces coexist.
+
+Tests: 37 → 40 web (3 new in `RadarCard.test.tsx`).

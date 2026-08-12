@@ -24,3 +24,4 @@
 - **React UI** (Vite + TanStack Query + Tailwind v4) ✅ done (`5eb7b6b`)
 - **M1 forecast expansion** (hourly + WFO metadata) ✅ done (`576eb3f`–`4b88d6c`)
 - **M2 observations + alerts** (current conditions + active alerts + UI) ✅ done (`082e26f`–`f9dcf6a`)
+- **Radar map embed** (RainViewer iframe, lazy-loaded on click) ✅ done
