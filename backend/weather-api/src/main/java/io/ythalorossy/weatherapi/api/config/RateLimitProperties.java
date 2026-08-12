@@ -2,29 +2,6 @@ package io.ythalorossy.weatherapi.api.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Bound to the {@code weather.rate-limit.*} tree in {@code application.yml}.
- *
- * <p>Two-bandwidth limit:
- * <ul>
- *   <li><b>burst</b> — capacity and refill rate for short-term spikes.
- *       Defaults to 5 capacity, 5 tokens per second refill.</li>
- *   <li><b>sustained</b> — capacity and refill rate for long-term cap.
- *       Defaults to 60 capacity, 60 tokens per minute refill.</li>
- * </ul>
- * Each request consumes one token from <em>both</em> bandwidths; the more
- * restrictive decides.
- *
- * <p>The Redis connection is <em>not</em> configured here — it reuses the
- * Spring Boot {@code spring.data.redis.*} properties so the rate-limiter
- * shares the same Redis instance as the caches and the testcontainers
- * Testcontainers Redis in tests.
- */
-// Record form attempted but reverted: record's `boolean enabled` defaults to
-// `false` (Java primitive default) when YAML omits `enabled`, silently
-// disabling rate limiting in production. JavaBean keeps `enabled = true`.
-// ponytail: would record work with @ConstructorBinding + explicit `enabled: true`
-// in YAML — yes, but that requires editing YAML outside the brief's scope.
 @ConfigurationProperties("weather.rate-limit")
 public class RateLimitProperties {
 
