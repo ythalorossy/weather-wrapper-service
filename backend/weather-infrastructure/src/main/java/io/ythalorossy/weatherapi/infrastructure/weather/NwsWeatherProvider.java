@@ -13,6 +13,8 @@ import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
@@ -81,15 +83,20 @@ public class NwsWeatherProvider implements WeatherProvider {
         }
 
         // Step 2: forecast from the gridpoint
-        GridpointForecastResponse forecast = NwsClient.invoke(
-                () -> client.get()
-                        .uri("/gridpoints/{gridId}/{x},{y}/forecast",
-                                props.gridId(), props.gridX(), props.gridY())
-                        .retrieve()
-                        .body(GridpointForecastResponse.class),
-                "NWS /forecast",
-                location
-        );
+        GridpointForecastResponse forecast;
+        try {
+            forecast = client.get()
+                    .uri("/gridpoints/{gridId}/{x},{y}/forecast",
+                            props.gridId(), props.gridX(), props.gridY())
+                    .retrieve()
+                    .body(GridpointForecastResponse.class);
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /forecast returned " + e.getStatusCode() + " for " + location.displayName(), e);
+        } catch (Exception e) {
+            throw new WeatherProviderUnavailableException(
+                    "Failed to call NWS /forecast for " + location.displayName() + ": " + e.getMessage(), e);
+        }
 
         if (forecast == null || forecast.properties() == null
                 || forecast.properties().periods() == null

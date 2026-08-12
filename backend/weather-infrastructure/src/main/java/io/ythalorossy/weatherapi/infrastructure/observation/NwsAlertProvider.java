@@ -11,10 +11,11 @@ import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.infrastructure.observation.dto.AlertsActiveResponse;
-import io.ythalorossy.weatherapi.infrastructure.weather.NwsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
@@ -58,17 +59,22 @@ public class NwsAlertProvider implements AlertProvider {
     }
 
     private List<WeatherAlert> doFetch(Location location) {
-        AlertsActiveResponse response = NwsClient.invoke(
-                () -> client.get()
-                        .uri(uriBuilder -> uriBuilder
-                                .path("/alerts/active")
-                                .queryParam("point", location.latitude() + "," + location.longitude())
-                                .build())
-                        .retrieve()
-                        .body(AlertsActiveResponse.class),
-                "NWS /alerts/active",
-                location
-        );
+        AlertsActiveResponse response;
+        try {
+            response = client.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/alerts/active")
+                            .queryParam("point", location.latitude() + "," + location.longitude())
+                            .build())
+                    .retrieve()
+                    .body(AlertsActiveResponse.class);
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /alerts/active returned " + e.getStatusCode() + " for " + location.displayName(), e);
+        } catch (Exception e) {
+            throw new WeatherProviderUnavailableException(
+                    "Failed to call NWS /alerts/active for " + location.displayName() + ": " + e.getMessage(), e);
+        }
 
         if (response == null || response.features() == null) {
             return List.of();

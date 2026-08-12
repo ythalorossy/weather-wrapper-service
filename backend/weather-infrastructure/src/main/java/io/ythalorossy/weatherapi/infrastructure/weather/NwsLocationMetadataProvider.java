@@ -11,6 +11,8 @@ import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.util.Objects;
@@ -78,14 +80,19 @@ public class NwsLocationMetadataProvider implements LocationMetadataProvider {
         }
 
         // Step 2: office details (name + disclaimer)
-        OfficeResponse office = NwsClient.invoke(
-                () -> client.get()
-                        .uri("/offices/{officeId}", officeId)
-                        .retrieve()
-                        .body(OfficeResponse.class),
-                "NWS /offices",
-                location
-        );
+        OfficeResponse office;
+        try {
+            office = client.get()
+                    .uri("/offices/{officeId}", officeId)
+                    .retrieve()
+                    .body(OfficeResponse.class);
+        } catch (HttpClientErrorException | HttpServerErrorException e) {
+            throw new WeatherProviderUnavailableException(
+                    "NWS /offices returned " + e.getStatusCode() + " for " + location.displayName(), e);
+        } catch (Exception e) {
+            throw new WeatherProviderUnavailableException(
+                    "Failed to call NWS /offices for " + location.displayName() + ": " + e.getMessage(), e);
+        }
 
         if (office == null || office.name() == null || office.sameAs() == null) {
             throw new WeatherProviderUnavailableException(
