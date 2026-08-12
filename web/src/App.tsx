@@ -11,6 +11,7 @@ import { SaveLocationButton } from './components/SaveLocationButton';
 import { ForecastTabs } from './components/ForecastTabs';
 import { MetadataBar } from './components/MetadataBar';
 import { CurrentConditionsCard } from './components/CurrentConditionsCard';
+import { RadarCard } from './components/RadarCard';
 import { AlertsBanner } from './components/AlertsBanner';
 import { AlertList } from './components/AlertList';
 
@@ -99,6 +100,14 @@ export default function App() {
 
             {conditions.data?.observation && (
               <CurrentConditionsCard observation={conditions.data.observation} />
+            )}
+
+            {daily.data.resolvedLocation && (
+              <RadarCard
+                latitude={daily.data.resolvedLocation.latitude}
+                longitude={daily.data.resolvedLocation.longitude}
+                displayName={daily.data.resolvedLocation.displayName}
+              />
             )}
 
             {hourly.data ? (
