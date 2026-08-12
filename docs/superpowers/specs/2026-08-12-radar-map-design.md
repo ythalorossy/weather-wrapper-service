@@ -68,7 +68,6 @@ export function RadarCard({ latitude, longitude, displayName }: RadarCardProps) 
             height="100%"
             style={{ border: 0 }}
             loading="lazy"
-            referrerPolicy="no-referrer-ferrer-when-downgrade"
           />
         </div>
       ) : (
