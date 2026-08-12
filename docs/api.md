@@ -65,7 +65,7 @@ forecast narrative produced by the local WFO several times per day.
 | 502 | NWS unreachable. |
 
 Results are cached server-side per office id for 30 minutes (configurable
-via `weather.afd.ttl`).
+via `weather.afd-ttl`).
 
 ## `GET /api/v1/conditions?city={city}`
 
