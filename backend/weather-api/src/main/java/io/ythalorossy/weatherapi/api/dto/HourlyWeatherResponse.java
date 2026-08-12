@@ -26,17 +26,6 @@ public record HourlyWeatherResponse(
         ForecastView forecast
 ) {
 
-    public static HourlyWeatherResponse from(String requestedCity, HourlyForecast forecast) {
-        List<PeriodView> periods = forecast.periods().stream()
-                .map(HourlyWeatherResponse::toPeriodView)
-                .toList();
-        return new HourlyWeatherResponse(
-                requestedCity,
-                null, // filled by controller to avoid coupling domain to API layer
-                new ForecastView(forecast.generatedAt(), forecast.source(), periods)
-        );
-    }
-
     @Schema(description = "Forecast envelope from the National Weather Service.")
     public record ForecastView(
             @Schema(description = "ISO-8601 timestamp at which the NWS generated this forecast.",
