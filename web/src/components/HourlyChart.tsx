@@ -1,7 +1,7 @@
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import type { HourlyForecastPeriod, HourlyWeatherResponse, SunView } from '../api/weather';
-import { useMemo, useRef, type JSX, type RefObject } from 'react';
+import { useMemo, type JSX, type RefObject } from 'react';
 
 export interface BuildOptionResult {
   option: EChartsOption;
@@ -157,7 +157,6 @@ export function HourlyChart({ data, rowRefs, hours = 48, sun, today }: Props): J
   const periods = today && sun
     ? rawPeriods.filter((p) => toLocalDateStr(new Date(p.startTime)) === sun.date).slice(0, 24)
     : rawPeriods.slice(0, hours);
-  const chartRef = useRef<ReactECharts>(null);
 
   const { option, minT, maxT } = useMemo(
     () => buildOption(periods, sun),
@@ -176,7 +175,6 @@ export function HourlyChart({ data, rowRefs, hours = 48, sun, today }: Props): J
       className="rounded-2xl border border-slate-200 bg-white shadow-sm p-3 w-full h-40"
     >
       <ReactECharts
-        ref={chartRef}
         option={option}
         onEvents={{ click: (p: { dataIndex: number }) => onClickHour(rowRefs, p.dataIndex) }}
         opts={{ renderer: 'svg' }}

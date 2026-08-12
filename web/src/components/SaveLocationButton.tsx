@@ -10,7 +10,7 @@ interface Props {
  * when the city is in the saved set, outline when not.
  */
 export function SaveLocationButton({ city }: Props) {
-  const { saved, add, remove, isSaved } = useSavedLocations();
+  const { add, remove, isSaved } = useSavedLocations();
   if (!city) return null;
 
   const isCurrentlySaved = isSaved(city);
@@ -23,9 +23,6 @@ export function SaveLocationButton({ city }: Props) {
       add(city);
     }
   }
-
-  // Reference `saved` so devtools shows the live saved list (used by the pills).
-  void saved;
 
   return (
     <button

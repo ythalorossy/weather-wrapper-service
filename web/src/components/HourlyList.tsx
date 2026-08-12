@@ -31,7 +31,7 @@ export function HourlyList({ data, rowRefs, hours = 24 }: Props) {
             dateTime={period.startTime}
             className="text-slate-600 tabular-nums"
           >
-            {formatHour(period.startTime, data.resolvedLocation.displayName)}
+            {formatHour(period.startTime)}
           </time>
           <span className="text-right text-slate-400 text-xs uppercase tracking-wider">
             {period.daytime ? '☀' : '☾'}
@@ -48,7 +48,7 @@ export function HourlyList({ data, rowRefs, hours = 24 }: Props) {
   );
 }
 
-function formatHour(iso: string, _displayName: string): string {
+function formatHour(iso: string): string {
   const date = new Date(iso);
   return date.toLocaleTimeString(undefined, {
     hour: 'numeric',
