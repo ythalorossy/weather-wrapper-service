@@ -8,42 +8,47 @@ import {
   saveLastCity,
 } from '../lib/savedLocations';
 
-const subscribers = new Set<() => void>();
+const SAVED_KEY = 'weather-wrapper-service:saved-cities:v1';
+const LAST_KEY = 'weather-wrapper-service:last-city:v1';
 
-function emit(): void {
-  subscribers.forEach((cb) => cb());
-}
+let savedRawCache: string | null = '';
+let savedCache: string[] = [];
 
 function subscribe(cb: () => void): () => void {
-  subscribers.add(cb);
   const onStorage = (e: StorageEvent) => {
     if (e.key === null || e.key.startsWith('weather-wrapper-service:')) {
+      savedRawCache = '';
       cb();
     }
   };
   window.addEventListener('storage', onStorage);
-  return () => {
-    subscribers.delete(cb);
-    window.removeEventListener('storage', onStorage);
-  };
+  return () => window.removeEventListener('storage', onStorage);
 }
 
-function getSnapshot(): string {
-  return JSON.stringify(load());
+function getSavedSnapshot(): string[] {
+  const raw = localStorage.getItem(SAVED_KEY);
+  if (raw !== savedRawCache) {
+    savedRawCache = raw;
+    savedCache = load();
+  }
+  return savedCache;
+}
+
+function getLastCitySnapshot(): string | null {
+  return loadLastCity();
 }
 
 export function useSavedLocations() {
-  const json = useSyncExternalStore(subscribe, getSnapshot, getSnapshot);
-  const saved = JSON.parse(json) as string[];
+  const saved = useSyncExternalStore(subscribe, getSavedSnapshot, getSavedSnapshot);
 
   const add = useCallback((city: string) => {
     addToStorage(city);
-    emit();
+    window.dispatchEvent(new StorageEvent('storage', { key: SAVED_KEY }));
   }, []);
 
   const remove = useCallback((city: string) => {
     removeFromStorage(city);
-    emit();
+    window.dispatchEvent(new StorageEvent('storage', { key: SAVED_KEY }));
   }, []);
 
   const isSaved = useCallback((city: string) => isSavedInStorage(city), []);
@@ -52,14 +57,10 @@ export function useSavedLocations() {
 }
 
 export function useLastCity() {
-  const lastCity = useSyncExternalStore(
-    subscribe,
-    () => loadLastCity() ?? '',
-    () => loadLastCity() ?? '',
-  );
+  const lastCity = useSyncExternalStore(subscribe, getLastCitySnapshot, getLastCitySnapshot);
   const setLastCity = useCallback((city: string | null) => {
     saveLastCity(city);
-    emit();
+    window.dispatchEvent(new StorageEvent('storage', { key: LAST_KEY }));
   }, []);
   return { lastCity: lastCity || null, setLastCity };
 }
