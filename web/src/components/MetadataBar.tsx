@@ -1,18 +1,15 @@
 import type { LocationMetadataResponse } from '../api/weather';
-import { SunTimesCard } from './SunTimesCard';
 
 interface Props {
   data: LocationMetadataResponse;
 }
 
-/**
- * "Forecast from NWS Baltimore/Washington · KLWX radar · LWX" strip with an
- * optional sunrise/sunset line beneath. Renders nothing different when
- * `data.sun` is undefined; the strip just stays short.
- *
- * The radar station id links out to the new radar.weather.gov SPA,
- * pre-loaded with the station.
- */
+function formatDayLength(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  return `${h}h ${m}m`;
+}
+
 export function MetadataBar({ data }: Props) {
   const { office, sun } = data;
   return (
@@ -39,7 +36,17 @@ export function MetadataBar({ data }: Props) {
         {' · '}
         {office.officeId}
       </p>
-      {sun && <SunTimesCard sun={sun} />}
+      {sun && (
+        <p className="mt-2 text-sm text-slate-600">
+          <span aria-hidden="true">☀</span>{' '}
+          <time dateTime={`${sun.date}T${sun.sunriseLocal}`}>{sun.sunriseLocal}</time>
+          <span className="text-slate-400" aria-hidden="true"> ↑ </span>
+          <span aria-hidden="true">·</span>
+          <span className="text-slate-400" aria-hidden="true"> ↓ </span>
+          <time dateTime={`${sun.date}T${sun.sunsetLocal}`}>{sun.sunsetLocal}</time>
+          <span className="text-slate-400"> · {formatDayLength(sun.dayLengthSeconds)} of daylight</span>
+        </p>
+      )}
     </div>
   );
 }
