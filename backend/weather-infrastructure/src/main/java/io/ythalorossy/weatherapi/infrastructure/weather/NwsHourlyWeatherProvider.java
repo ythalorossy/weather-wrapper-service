@@ -13,8 +13,6 @@ import io.ythalorossy.weatherapi.infrastructure.weather.dto.PointsResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
@@ -82,20 +80,15 @@ public class NwsHourlyWeatherProvider implements HourlyWeatherProvider {
         }
 
         // Step 2: hourly forecast from the gridpoint
-        GridpointHourlyForecastResponse forecast;
-        try {
-            forecast = client.get()
-                    .uri("/gridpoints/{gridId}/{x},{y}/forecast/hourly",
-                            props.gridId(), props.gridX(), props.gridY())
-                    .retrieve()
-                    .body(GridpointHourlyForecastResponse.class);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    "NWS /forecast/hourly returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call NWS /forecast/hourly for " + location.displayName() + ": " + e.getMessage(), e);
-        }
+        GridpointHourlyForecastResponse forecast = NwsClient.invoke(
+                () -> client.get()
+                        .uri("/gridpoints/{gridId}/{x},{y}/forecast/hourly",
+                                props.gridId(), props.gridX(), props.gridY())
+                        .retrieve()
+                        .body(GridpointHourlyForecastResponse.class),
+                "NWS /forecast/hourly",
+                location
+        );
 
         if (forecast == null || forecast.properties() == null
                 || forecast.properties().periods() == null

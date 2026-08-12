@@ -8,11 +8,10 @@ import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
 import io.ythalorossy.weatherapi.infrastructure.observation.dto.GridpointStationsResponse;
 import io.ythalorossy.weatherapi.infrastructure.observation.dto.ObservationLatestResponse;
+import io.ythalorossy.weatherapi.infrastructure.weather.NwsClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
-import org.springframework.web.client.HttpClientErrorException;
-import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 
 import java.time.Instant;
@@ -59,19 +58,14 @@ public class NwsObservationProvider implements ObservationProvider {
 
     private Optional<Observation> doFetch(Location location) {
         // Step 1: find nearby stations (sorted by distance; first is nearest).
-        GridpointStationsResponse stations;
-        try {
-            stations = client.get()
-                    .uri("/points/{lat},{lon}/stations", location.latitude(), location.longitude())
-                    .retrieve()
-                    .body(GridpointStationsResponse.class);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    "NWS /points/.../stations returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call NWS /points/.../stations for " + location.displayName() + ": " + e.getMessage(), e);
-        }
+        GridpointStationsResponse stations = NwsClient.invoke(
+                () -> client.get()
+                        .uri("/points/{lat},{lon}/stations", location.latitude(), location.longitude())
+                        .retrieve()
+                        .body(GridpointStationsResponse.class),
+                "NWS /points/.../stations",
+                location
+        );
 
         if (stations == null || stations.features() == null || stations.features().isEmpty()) {
             log.debug("No nearby stations for {} ({},{})", location.displayName(),
@@ -88,19 +82,14 @@ public class NwsObservationProvider implements ObservationProvider {
         }
 
         // Step 2: fetch latest observation from the nearest station.
-        ObservationLatestResponse obs;
-        try {
-            obs = client.get()
-                    .uri("/stations/{stationId}/observations/latest", stationId)
-                    .retrieve()
-                    .body(ObservationLatestResponse.class);
-        } catch (HttpClientErrorException | HttpServerErrorException e) {
-            throw new WeatherProviderUnavailableException(
-                    "NWS /stations/.../observations/latest returned " + e.getStatusCode() + " for " + location.displayName(), e);
-        } catch (Exception e) {
-            throw new WeatherProviderUnavailableException(
-                    "Failed to call NWS /stations/.../observations/latest for " + location.displayName() + ": " + e.getMessage(), e);
-        }
+        ObservationLatestResponse obs = NwsClient.invoke(
+                () -> client.get()
+                        .uri("/stations/{stationId}/observations/latest", stationId)
+                        .retrieve()
+                        .body(ObservationLatestResponse.class),
+                "NWS /stations/.../observations/latest",
+                location
+        );
 
         if (obs == null || obs.properties() == null) {
             throw new WeatherProviderUnavailableException(
