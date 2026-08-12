@@ -1,13 +1,10 @@
 /**
- * Pure helpers for the saved-locations `localStorage` slice.
+ * Pure helpers for the saved-locations localStorage slice.
  *
- * Two keys are managed here:
- *   - `weather-wrapper-service:saved-cities:v1`  — JSON array of city strings
- *   - `weather-wrapper-service:last-city:v1`     — single string or null
- *
- * All helpers fail quietly: `localStorage` may be unavailable (private mode,
- * quota exceeded, SecurityError). The UI degrades to "no saved locations"
- * with no user-visible error.
+ * Two keys: `weather-wrapper-service:saved-cities:v1` and
+ * `weather-wrapper-service:last-city:v1`. Errors from localStorage
+ * (quota exceeded, SecurityError) are swallowed — the UI degrades to
+ * "no saved locations" silently.
  */
 
 const SAVED_KEY = 'weather-wrapper-service:saved-cities:v1';
@@ -21,13 +18,32 @@ function sameCity(a: string, b: string): boolean {
   return a.trim().toLowerCase() === b.trim().toLowerCase();
 }
 
-export function load(): string[] {
-  let raw: string | null = null;
+function safeGet(key: string): string | null {
   try {
-    if (typeof window !== 'undefined') raw = window.localStorage.getItem(SAVED_KEY);
-  } catch (e) {
-    console.warn('localStorage.getItem failed:', e);
+    return localStorage.getItem(key);
+  } catch {
+    return null;
   }
+}
+
+function safeSet(key: string, value: string): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // quota exceeded / SecurityError — degrade silently
+  }
+}
+
+function safeRemove(key: string): void {
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // quota exceeded / SecurityError — degrade silently
+  }
+}
+
+export function load(): string[] {
+  const raw = safeGet(SAVED_KEY);
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw);
@@ -38,11 +54,7 @@ export function load(): string[] {
 }
 
 export function save(list: string[]): void {
-  try {
-    if (typeof window !== 'undefined') window.localStorage.setItem(SAVED_KEY, JSON.stringify(list));
-  } catch (e) {
-    console.warn(`localStorage.setItem failed for key "${SAVED_KEY}":`, e);
-  }
+  safeSet(SAVED_KEY, JSON.stringify(list));
 }
 
 export function add(city: string): string[] {
@@ -66,27 +78,13 @@ export function isSaved(city: string): boolean {
 }
 
 export function loadLastCity(): string | null {
-  let raw: string | null = null;
-  try {
-    if (typeof window !== 'undefined') raw = window.localStorage.getItem(LAST_KEY);
-  } catch (e) {
-    console.warn('localStorage.getItem failed:', e);
-  }
-  return raw;
+  return safeGet(LAST_KEY);
 }
 
 export function saveLastCity(city: string | null): void {
   if (city === null || city.trim().length === 0) {
-    try {
-      if (typeof window !== 'undefined') window.localStorage.removeItem(LAST_KEY);
-    } catch (e) {
-      console.warn(`localStorage.removeItem failed for key "${LAST_KEY}":`, e);
-    }
+    safeRemove(LAST_KEY);
     return;
   }
-  try {
-    if (typeof window !== 'undefined') window.localStorage.setItem(LAST_KEY, normalize(city));
-  } catch (e) {
-    console.warn(`localStorage.setItem failed for key "${LAST_KEY}":`, e);
-  }
+  safeSet(LAST_KEY, normalize(city));
 }

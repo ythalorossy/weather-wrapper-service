@@ -51,11 +51,11 @@ describe('savedLocations helpers', () => {
     Storage.prototype.setItem = vi.fn(() => {
       throw new Error('QuotaExceededError');
     });
-    const consoleWarn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(() => save(['Arlington, VA'])).not.toThrow();
-    expect(consoleWarn).toHaveBeenCalled();
-    Storage.prototype.setItem = original;
-    consoleWarn.mockRestore();
+    try {
+      expect(() => save(['Arlington, VA'])).not.toThrow();
+    } finally {
+      Storage.prototype.setItem = original;
+    }
   });
 
   it('returns an empty list when localStorage is unavailable', () => {
