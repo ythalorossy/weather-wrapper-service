@@ -72,7 +72,7 @@ public class ConditionsController {
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
         // Reuse the resolver-backed daily use case just for the resolved Location.
-        Location location = getWeather.execute(city);
+        Location location = getWeather.execute(city).location();
         Observation obs = getCurrentConditions.execute(city);
 
         return ResponseEntity.ok(new CurrentConditionsResponse(

@@ -58,7 +58,7 @@ class GetWeatherUseCaseTest {
     void cacheHitReturnsWithoutCallingProvider() {
         when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.of(forecast));
 
-        Location location = useCase.execute(CITY);
+        Location location = useCase.execute(CITY).location();
 
         assertThat(location).isEqualTo(ARLINGTON);
         verify(weather, never()).getForecast(any());
@@ -70,7 +70,7 @@ class GetWeatherUseCaseTest {
         when(weatherCache.get(WEATHER_KEY)).thenReturn(Optional.empty());
         when(weather.getForecast(ARLINGTON)).thenReturn(forecast);
 
-        Location location = useCase.execute(CITY);
+        Location location = useCase.execute(CITY).location();
 
         assertThat(location).isEqualTo(ARLINGTON);
 

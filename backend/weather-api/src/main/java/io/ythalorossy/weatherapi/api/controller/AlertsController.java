@@ -70,7 +70,7 @@ public class AlertsController {
             @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
-        Location location = getWeather.execute(city);
+        Location location = getWeather.execute(city).location();
         List<WeatherAlert> alerts = getActiveAlerts.execute(city);
 
         List<AlertsResponse.AlertView> views = alerts.stream()

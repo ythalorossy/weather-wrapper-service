@@ -15,13 +15,12 @@ import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
+import io.ythalorossy.weatherapi.application.usecase.WeatherResult;
 import io.ythalorossy.weatherapi.domain.model.ForecastPeriod;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
-import io.ythalorossy.weatherapi.domain.port.Cache;
-import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.ProblemDetail;
@@ -39,22 +38,16 @@ import org.springframework.web.bind.annotation.RestController;
 public class WeatherController {
 
     private final GetWeatherUseCase getWeather;
-    private final Cache<WeatherForecast> weatherCache;
-    private final WeatherProvider weatherProvider;
     private final GetHourlyForecastUseCase getHourlyWeather;
     private final GetLocationMetadataUseCase getLocationMetadata;
     private final GetAfdUseCase getAfd;
 
     public WeatherController(
             GetWeatherUseCase getWeather,
-            Cache<WeatherForecast> weatherCache,
-            WeatherProvider weatherProvider,
             GetHourlyForecastUseCase getHourlyWeather,
             GetLocationMetadataUseCase getLocationMetadata,
             GetAfdUseCase getAfd) {
         this.getWeather = getWeather;
-        this.weatherCache = weatherCache;
-        this.weatherProvider = weatherProvider;
         this.getHourlyWeather = getHourlyWeather;
         this.getLocationMetadata = getLocationMetadata;
         this.getAfd = getAfd;
@@ -88,9 +81,8 @@ public class WeatherController {
                     example = "Arlington, VA",
                     required = true)
             @RequestParam("city") @NotBlank String city) {
-        Location location = getWeather.execute(city);
-        WeatherForecast fc = forecastFor(location);
-        return ResponseEntity.ok(toResponse(city, location, fc));
+        WeatherResult result = getWeather.execute(city);
+        return ResponseEntity.ok(toResponse(city, result.location(), result.forecast()));
     }
 
     @GetMapping("/hourly")
@@ -118,7 +110,7 @@ public class WeatherController {
             @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
-        Location location = getWeather.execute(city);
+        Location location = getWeather.execute(city).location();
         HourlyForecast hourly = getHourlyWeather.execute(city);
         return ResponseEntity.ok(toHourlyResponse(city, location, hourly));
     }
@@ -149,7 +141,7 @@ public class WeatherController {
             @Parameter(description = "Free-text city name, e.g. `Arlington, VA`.",
                     example = "Arlington, VA", required = true)
             @RequestParam("city") @NotBlank String city) {
-        Location location = getWeather.execute(city);
+        Location location = getWeather.execute(city).location();
         io.ythalorossy.weatherapi.application.usecase.LocationMetadataResult meta =
                 getLocationMetadata.execute(city);
         return ResponseEntity.ok(toMetadataResponse(city, location, meta));
@@ -184,13 +176,6 @@ public class WeatherController {
         return getAfd.execute(city)
                 .map(p -> ResponseEntity.ok(DiscussionResponse.from(p)))
                 .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    private static final String WEATHER_NS = "weather";
-
-    private WeatherForecast forecastFor(Location location) {
-        return weatherCache.get(location.cacheKey(WEATHER_NS).substring(WEATHER_NS.length() + 1))
-                .orElseGet(() -> weatherProvider.getForecast(location));
     }
 
     private static WeatherResponse toResponse(String requestedCity, Location loc, WeatherForecast fc) {

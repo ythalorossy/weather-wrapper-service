@@ -1,6 +1,5 @@
 package io.ythalorossy.weatherapi.application.usecase;
 
-import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.Cache;
@@ -30,11 +29,11 @@ public class GetWeatherUseCase {
         this.weatherCacheTtl = weatherCacheTtl;
     }
 
-    public Location execute(String cityName) {
+    public WeatherResult execute(String cityName) {
         Location location = locationResolver.resolve(cityName);
-        CacheAside.getOrLoad(
+        WeatherForecast forecast = CacheAside.getOrLoad(
                 weatherCache, location.cacheKey(WEATHER_NS).substring(WEATHER_NS.length() + 1), weatherCacheTtl,
                 () -> weatherProvider.getForecast(location));
-        return location;
+        return new WeatherResult(location, forecast);
     }
 }
