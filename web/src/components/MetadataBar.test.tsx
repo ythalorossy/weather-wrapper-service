@@ -15,6 +15,26 @@ const FIXTURE: LocationMetadataResponse = {
   },
 };
 
+const FIXTURE_WITH_SUN: LocationMetadataResponse = {
+  ...FIXTURE,
+  sun: {
+    date: '2026-08-09',
+    sunriseLocal: '06:42',
+    sunsetLocal: '19:34',
+    dayLengthSeconds: 48720,
+  },
+};
+
+const FIXTURE_WITH_SHORT_DAY: LocationMetadataResponse = {
+  ...FIXTURE,
+  sun: {
+    date: '2026-12-21',
+    sunriseLocal: '07:30',
+    sunsetLocal: '16:45',
+    dayLengthSeconds: 33300,
+  },
+};
+
 describe('MetadataBar', () => {
   it('renders the radar station id as a link to radar.weather.gov', () => {
     render(<MetadataBar data={FIXTURE} />);
@@ -31,5 +51,19 @@ describe('MetadataBar', () => {
 
     const office = screen.getByRole('link', { name: 'NWS Baltimore/Washington' });
     expect(office).toHaveAttribute('href', 'https://www.weather.gov/lwx');
+  });
+
+  it('renders sunrise and sunset times plus day length when sun is present', () => {
+    render(<MetadataBar data={FIXTURE_WITH_SUN} />);
+
+    expect(screen.getByText('06:42')).toBeInTheDocument();
+    expect(screen.getByText('19:34')).toBeInTheDocument();
+    expect(screen.getByText(/13h 32m of daylight/)).toBeInTheDocument();
+  });
+
+  it('renders a short winter day length as 9h 15m of daylight', () => {
+    render(<MetadataBar data={FIXTURE_WITH_SHORT_DAY} />);
+
+    expect(screen.getByText(/9h 15m of daylight/)).toBeInTheDocument();
   });
 });
