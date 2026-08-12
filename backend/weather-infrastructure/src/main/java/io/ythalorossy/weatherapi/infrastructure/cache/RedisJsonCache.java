@@ -1,15 +1,18 @@
 package io.ythalorossy.weatherapi.infrastructure.cache;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -48,7 +51,10 @@ public class RedisJsonCache<V> implements Cache<V> {
                 return Optional.empty();
             }
             hits.increment();
-            return Optional.of(mapper.readValue(json, type));
+            JavaType javaType = (type == List.class)
+                    ? mapper.getTypeFactory().constructCollectionType(List.class, WeatherAlert.class)
+                    : mapper.getTypeFactory().constructType(type);
+            return Optional.of(mapper.readValue(json, javaType));
         } catch (JsonProcessingException e) {
             log.warn("Failed to deserialize {} cache key '{}': {}",
                      prefix, key, e.getMessage());
