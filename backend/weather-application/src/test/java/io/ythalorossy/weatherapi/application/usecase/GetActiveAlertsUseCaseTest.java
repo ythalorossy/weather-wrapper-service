@@ -53,7 +53,7 @@ class GetActiveAlertsUseCaseTest {
     );
 
     private AlertProvider alertProvider;
-    private Cache<AlertsPayload> alertCache;
+    private Cache<List<WeatherAlert>> alertCache;
     private LocationResolver locationResolver;
     private GetActiveAlertsUseCase useCase;
 
@@ -68,7 +68,7 @@ class GetActiveAlertsUseCaseTest {
 
     @Test
     void cacheHitReturnsWithoutCallingProvider() {
-        AlertsPayload cached = new AlertsPayload(List.of(alert));
+        List<WeatherAlert> cached = List.of(alert);
         when(alertCache.get(ALERTS_KEY)).thenReturn(Optional.of(cached));
 
         List<WeatherAlert> result = useCase.execute(CITY);
@@ -88,7 +88,7 @@ class GetActiveAlertsUseCaseTest {
         assertThat(result).containsExactly(alert);
 
         ArgumentCaptor<Duration> ttlCaptor = ArgumentCaptor.forClass(Duration.class);
-        verify(alertCache).put(eq(ALERTS_KEY), eq(new AlertsPayload(List.of(alert))), ttlCaptor.capture());
+        verify(alertCache).put(eq(ALERTS_KEY), eq(List.of(alert)), ttlCaptor.capture());
         assertThat(ttlCaptor.getValue()).isEqualTo(TTL);
     }
 
@@ -100,7 +100,7 @@ class GetActiveAlertsUseCaseTest {
         List<WeatherAlert> result = useCase.execute(CITY);
 
         assertThat(result).isEmpty();
-        verify(alertCache).put(eq(ALERTS_KEY), eq(new AlertsPayload(List.of())), any());
+        verify(alertCache).put(eq(ALERTS_KEY), eq(List.of()), any());
     }
 
     @Test

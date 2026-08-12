@@ -2,7 +2,6 @@ package io.ythalorossy.weatherapi.api.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.ythalorossy.weatherapi.application.usecase.AlertsPayload;
 import io.ythalorossy.weatherapi.application.usecase.GetActiveAlertsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
@@ -16,6 +15,7 @@ import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
+import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
 import io.ythalorossy.weatherapi.domain.port.AreaForecastDiscussionProvider;
@@ -32,6 +32,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
+import java.util.List;
+
 /**
  * Wires the plain-Java use cases into the Spring container.
  *
@@ -43,11 +45,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 public class UseCaseConfig {
 
     @Bean
-    public Cache<Location> locationCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "geo", Location.class, meters);
+    public Cache<Location> locationCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("geo", Location.class, redis, mapper, meters);
     }
 
     @Bean
@@ -64,51 +63,39 @@ public class UseCaseConfig {
     }
 
     @Bean
-    public Cache<WeatherForecast> weatherCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "weather", WeatherForecast.class, meters);
+    public Cache<WeatherForecast> weatherCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("weather", WeatherForecast.class, redis, mapper, meters);
     }
 
     @Bean
-    public Cache<HourlyForecast> hourlyForecastCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "hourly", HourlyForecast.class, meters);
+    public Cache<HourlyForecast> hourlyForecastCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("hourly", HourlyForecast.class, redis, mapper, meters);
     }
 
     @Bean
-    public Cache<Observation> observationCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "obs", Observation.class, meters);
+    public Cache<Observation> observationCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("obs", Observation.class, redis, mapper, meters);
     }
 
     @Bean
-    public Cache<AlertsPayload> alertsCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "alerts", AlertsPayload.class, meters);
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Cache<List<WeatherAlert>> alertsCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("alerts", (Class<List<WeatherAlert>>) (Class) List.class, redis, mapper, meters);
     }
 
     @Bean
-    public Cache<AfdProduct> afdCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "afd", AfdProduct.class, meters);
+    public Cache<AfdProduct> afdCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("afd", AfdProduct.class, redis, mapper, meters);
     }
 
     @Bean
-    public Cache<SunTimes> sunTimesCache(
-            StringRedisTemplate redis,
-            ObjectMapper mapper,
-            MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, "sun", SunTimes.class, meters);
+    public Cache<SunTimes> sunTimesCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("sun", SunTimes.class, redis, mapper, meters);
+    }
+
+    private static <V> Cache<V> cache(String prefix, Class<V> type,
+                                      StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, prefix, type, meters);
     }
 
     @Bean
@@ -181,7 +168,7 @@ public class UseCaseConfig {
     @Bean
     public GetActiveAlertsUseCase getActiveAlertsUseCase(
             AlertProvider alertProvider,
-            Cache<AlertsPayload> alertsCache,
+            Cache<List<WeatherAlert>> alertsCache,
             LocationResolver locationResolver,
             WeatherProperties properties) {
         return new GetActiveAlertsUseCase(

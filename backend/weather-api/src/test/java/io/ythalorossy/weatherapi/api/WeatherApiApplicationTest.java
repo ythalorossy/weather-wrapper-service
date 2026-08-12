@@ -14,7 +14,6 @@ import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
 import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
-import io.ythalorossy.weatherapi.application.usecase.AlertsPayload;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.domain.model.WeatherOffice;
 import io.ythalorossy.weatherapi.domain.port.AlertProvider;
@@ -119,7 +118,7 @@ class WeatherApiApplicationTest {
     AlertProvider alertProvider;
 
     @MockBean
-    Cache<AlertsPayload> alertCache;
+    Cache<List<WeatherAlert>> alertCache;
 
     @MockBean
     SunTimesProvider sunTimesProvider;

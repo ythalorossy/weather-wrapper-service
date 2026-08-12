@@ -14,13 +14,13 @@ public class GetActiveAlertsUseCase {
     private static final String ALERTS_NS = "alerts";
 
     private final AlertProvider alertProvider;
-    private final Cache<AlertsPayload> alertCache;
+    private final Cache<List<WeatherAlert>> alertCache;
     private final LocationResolver locationResolver;
     private final Duration alertCacheTtl;
 
     public GetActiveAlertsUseCase(
             AlertProvider alertProvider,
-            Cache<AlertsPayload> alertCache,
+            Cache<List<WeatherAlert>> alertCache,
             LocationResolver locationResolver,
             Duration alertCacheTtl) {
         this.alertProvider = Objects.requireNonNull(alertProvider, "alertProvider");
@@ -34,6 +34,6 @@ public class GetActiveAlertsUseCase {
         Location location = locationResolver.resolve(cityName);
         return CacheAside.getOrLoad(
                 alertCache, location.cacheKey(ALERTS_NS).substring(ALERTS_NS.length() + 1), alertCacheTtl,
-                () -> new AlertsPayload(alertProvider.getActiveAlerts(location))).alerts();
+                () -> alertProvider.getActiveAlerts(location));
     }
 }
