@@ -7,10 +7,10 @@ import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
 import io.ythalorossy.weatherapi.infrastructure.InfrastructureTestConfig;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -24,6 +24,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(classes = InfrastructureTestConfig.class)
 @ContextConfiguration(classes = InfrastructureTestConfig.class)
+@DirtiesContext(classMode = DirtiesContext.ClassMode.BEFORE_EACH_TEST_METHOD)
 class NwsWeatherProviderTest {
 
     static WireMockServer wireMock = new WireMockServer(options().dynamicPort());
@@ -42,15 +43,7 @@ class NwsWeatherProviderTest {
     @Autowired
     NwsWeatherProvider provider;
 
-    @Autowired
-    NwsPointsService pointsService;
-
     private final Location location = new Location(38.8816, -77.0910, "Arlington, VA");
-
-    @BeforeEach
-    void resetMemo() {
-        pointsService.clearMemo();
-    }
 
     @Test
     void fetchesForecastViaTwoStepFlow() {

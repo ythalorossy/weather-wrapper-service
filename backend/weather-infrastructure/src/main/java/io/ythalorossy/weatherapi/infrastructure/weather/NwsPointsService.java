@@ -42,8 +42,4 @@ public class NwsPointsService {
             }
         });
     }
-
-    void clearMemo() {
-        memo.clear();
-    }
 }
