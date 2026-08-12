@@ -43,9 +43,6 @@ export function RadarCard({ latitude, longitude, displayName }: RadarCardProps) 
             height="100%"
             style={{ border: 0 }}
             loading="lazy"
-            // ponytail: W3C Referrer-Policy value not yet in React DOM lib types; drop cast when @types/react ships it.
-            // @ts-expect-error - W3C "no-referrer-ferrer-when-downgrade" not in HTMLAttributeReferrerPolicy union
-            referrerPolicy="no-referrer-ferrer-when-downgrade"
           />
         </div>
       ) : (

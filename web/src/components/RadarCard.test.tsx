@@ -36,7 +36,6 @@ describe('RadarCard', () => {
     expect(iframe.src).toContain('layer=radar');
     expect(iframe.src).toContain('sm=1');
     expect(iframe.src).toContain('sn=1');
-    expect(iframe).toHaveAttribute('referrerpolicy', 'no-referrer-ferrer-when-downgrade');
   });
 
   it('uses a generic iframe title when displayName is not provided', () => {
