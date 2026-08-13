@@ -57,7 +57,7 @@ web/
 | `HourlyList` | Renders hourly forecast rows |
 | `HourlyChart` | Apache ECharts (SVG renderer) temperature line chart embedded above the HourlyList. Renders sunrise/sunset markers and daytime shading when sun metadata is available; hover reveals a tooltip; click scrolls the matching list row into view. |
 | `MetadataBar` | WFO name + NWS attribution strip |
-| `RadarCard` | RainViewer iframe, lazy-loaded on click; lat/lon-centered |
+| `RadarCard` | RainViewer iframe, lazy-loaded on click; lat/lon-centered; toggle button (`Show radar map` ↔ `Hide radar map`) dismisses the iframe |
 | `CurrentConditionsCard` | Temperature, wind, humidity, pressure |
 | `AlertsBanner` | Most-severe alert with dismiss action |
 | `AlertList` | All alerts with severity color coding |
