@@ -6,6 +6,9 @@ import io.ythalorossy.weatherapi.domain.model.AlertCertainty;
 import io.ythalorossy.weatherapi.domain.model.AlertSeverity;
 import io.ythalorossy.weatherapi.domain.model.AlertUrgency;
 import io.ythalorossy.weatherapi.domain.model.Location;
+import io.ythalorossy.weatherapi.domain.model.Station;
+import io.ythalorossy.weatherapi.domain.model.StationObservation;
+import io.ythalorossy.weatherapi.domain.model.Temperature;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.infrastructure.InfrastructureTestConfig;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -39,6 +42,8 @@ class RedisJsonCacheTest {
                     .withExposedPorts(6379);
     static RedisJsonCache<Location> cache;
     static RedisJsonCache<List<WeatherAlert>> alertsCache;
+    static RedisJsonCache<List<Station>> stationsCache;
+    static RedisJsonCache<List<StationObservation>> stationObservationsCache;
 
     @DynamicPropertySource
     static void redisProps(DynamicPropertyRegistry r) {
@@ -52,10 +57,19 @@ class RedisJsonCacheTest {
                       @Autowired ObjectMapper mapper) {
         cache = new RedisJsonCache<>(
                 template, mapper, "geo",
-                Location.class, new SimpleMeterRegistry());
+                Location.class, Location.class, new SimpleMeterRegistry());
         alertsCache = new RedisJsonCache<List<WeatherAlert>>(
                 template, mapper, "alerts",
-                (Class<List<WeatherAlert>>) (Class) List.class, new SimpleMeterRegistry());
+                (Class<List<WeatherAlert>>) (Class) List.class,
+                WeatherAlert.class, new SimpleMeterRegistry());
+        stationsCache = new RedisJsonCache<List<Station>>(
+                template, mapper, "stations",
+                (Class<List<Station>>) (Class) List.class,
+                Station.class, new SimpleMeterRegistry());
+        stationObservationsCache = new RedisJsonCache<List<StationObservation>>(
+                template, mapper, "station-obs",
+                (Class<List<StationObservation>>) (Class) List.class,
+                StationObservation.class, new SimpleMeterRegistry());
     }
 
     @AfterAll
@@ -108,5 +122,50 @@ class RedisJsonCacheTest {
         assertThat(roundTripped.event()).isEqualTo("Severe Thunderstorm Warning");
         assertThat(roundTripped.severity()).isEqualTo(AlertSeverity.Severe);
         assertThat(roundTripped.areaDesc()).isEqualTo("Arlington County");
+    }
+
+    @Test
+    void roundTripsListOfStationsAsTypedElements() {
+        Station station = new Station("KDCA", "Washington Reagan", 38.85, -77.04);
+        List<Station> value = List.of(station);
+        stationsCache.put("arlington-va", value, Duration.ofMinutes(1));
+
+        Optional<List<Station>> hit = stationsCache.get("arlington-va");
+        assertThat(hit).isPresent();
+        List<Station> stations = hit.get();
+        assertThat(stations).hasSize(1);
+        Station roundTripped = stations.get(0);
+        assertThat(roundTripped).isInstanceOf(Station.class);
+        assertThat(roundTripped.stationId()).isEqualTo("KDCA");
+        assertThat(roundTripped.name()).isEqualTo("Washington Reagan");
+        assertThat(roundTripped.latitude()).isEqualTo(38.85);
+        assertThat(roundTripped.longitude()).isEqualTo(-77.04);
+    }
+
+    @Test
+    void roundTripsListOfStationObservationsAsTypedElements() {
+        StationObservation obs = new StationObservation(
+                "KDCA",
+                Instant.parse("2026-08-12T20:00:00Z"),
+                Temperature.fahrenheit(82),
+                65,
+                "5 mph",
+                "SW",
+                "KDCA 122053Z 22004KT ...",
+                29.95
+        );
+        List<StationObservation> value = List.of(obs);
+        stationObservationsCache.put("KDCA", value, Duration.ofMinutes(1));
+
+        Optional<List<StationObservation>> hit = stationObservationsCache.get("KDCA");
+        assertThat(hit).isPresent();
+        List<StationObservation> observations = hit.get();
+        assertThat(observations).hasSize(1);
+        StationObservation roundTripped = observations.get(0);
+        assertThat(roundTripped).isInstanceOf(StationObservation.class);
+        assertThat(roundTripped.stationId()).isEqualTo("KDCA");
+        assertThat(roundTripped.temperature().value()).isEqualTo(82);
+        assertThat(roundTripped.humidity()).isEqualTo(65);
+        assertThat(roundTripped.barometricPressure()).isEqualTo(29.95);
     }
 }

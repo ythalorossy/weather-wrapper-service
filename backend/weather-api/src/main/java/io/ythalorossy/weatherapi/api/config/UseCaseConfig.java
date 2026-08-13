@@ -85,9 +85,8 @@ public class UseCaseConfig {
     }
 
     @Bean
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public Cache<List<WeatherAlert>> alertsCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
-        return cache("alerts", (Class<List<WeatherAlert>>) (Class) List.class, redis, mapper, meters);
+        return listCache("alerts", WeatherAlert.class, redis, mapper, meters);
     }
 
     @Bean
@@ -101,20 +100,25 @@ public class UseCaseConfig {
     }
 
     @Bean
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public Cache<List<Station>> stationsCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
-        return cache("stations", (Class<List<Station>>) (Class) List.class, redis, mapper, meters);
+        return listCache("stations", Station.class, redis, mapper, meters);
     }
 
     @Bean
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public Cache<List<StationObservation>> stationObservationsCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
-        return cache("station-obs", (Class<List<StationObservation>>) (Class) List.class, redis, mapper, meters);
+        return listCache("station-obs", StationObservation.class, redis, mapper, meters);
     }
 
     private static <V> Cache<V> cache(String prefix, Class<V> type,
                                       StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
-        return new RedisJsonCache<>(redis, mapper, prefix, type, meters);
+        return new RedisJsonCache<>(redis, mapper, prefix, type, type, meters);
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <E> Cache<List<E>> listCache(String prefix, Class<E> elementType,
+                                                StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return new RedisJsonCache<>(redis, mapper, prefix,
+                (Class<List<E>>) (Class) List.class, elementType, meters);
     }
 
     @Bean

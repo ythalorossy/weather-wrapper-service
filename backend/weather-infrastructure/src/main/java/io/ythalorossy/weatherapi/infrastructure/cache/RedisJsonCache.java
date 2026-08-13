@@ -5,7 +5,6 @@ import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.MeterRegistry;
-import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.port.Cache;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,15 +23,18 @@ public class RedisJsonCache<V> implements Cache<V> {
     private final ObjectMapper mapper;
     private final String prefix;
     private final Class<V> type;
+    private final Class<?> elementType;
     private final Counter hits;
     private final Counter misses;
 
     public RedisJsonCache(StringRedisTemplate redis, ObjectMapper mapper,
-                          String prefix, Class<V> type, MeterRegistry meters) {
+                          String prefix, Class<V> type, Class<?> elementType,
+                          MeterRegistry meters) {
         this.redis = Objects.requireNonNull(redis);
         this.mapper = Objects.requireNonNull(mapper);
         this.prefix = Objects.requireNonNull(prefix);
         this.type = Objects.requireNonNull(type);
+        this.elementType = elementType;
         this.hits = Counter.builder("weather.cache." + prefix + ".hits")
             .description("Cache hits for " + prefix + " namespace")
             .register(meters);
@@ -52,7 +54,7 @@ public class RedisJsonCache<V> implements Cache<V> {
             }
             hits.increment();
             JavaType javaType = (type == List.class)
-                    ? mapper.getTypeFactory().constructCollectionType(List.class, WeatherAlert.class)
+                    ? mapper.getTypeFactory().constructCollectionType(List.class, elementType)
                     : mapper.getTypeFactory().constructType(type);
             return Optional.of(mapper.readValue(json, javaType));
         } catch (JsonProcessingException e) {
