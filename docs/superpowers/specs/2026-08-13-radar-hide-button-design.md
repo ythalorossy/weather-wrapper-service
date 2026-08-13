@@ -76,10 +76,9 @@ No new failure modes introduced.
 
 Extend `web/src/components/RadarCard.test.tsx` (no new files):
 
-1. Existing tests stay. The `getByRole('button', { name: /show radar
-   map/i })` queries still match both states because the regex is case
-   insensitive and uses no anchors — verified by reading the existing
-   test file.
+1. Existing tests stay. All three assertions run before any click, so
+   the button label is still "Show radar map" when they're evaluated —
+   the toggle label change only happens after click.
 2. **New** — clicking the button when loaded hides the iframe and reverts
    the button label to "Show radar map".
 3. **New** — clicking the button twice is a no-op round-trip: button
