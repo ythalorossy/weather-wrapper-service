@@ -1,6 +1,7 @@
 package io.ythalorossy.weatherapi.application.usecase;
 
 import io.ythalorossy.weatherapi.domain.exception.LocationNotFoundException;
+import io.ythalorossy.weatherapi.domain.exception.WeatherProviderUnavailableException;
 import io.ythalorossy.weatherapi.domain.model.Gridpoint;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Station;
@@ -85,10 +86,10 @@ class GetStationsUseCaseTest {
         when(stationsCache.get(STATIONS_KEY)).thenReturn(Optional.empty());
         when(locationResolver.resolve(CITY)).thenReturn(ARLINGTON);
         when(pointsProvider.getGridpoint(ARLINGTON))
-                .thenThrow(new IllegalStateException("NWS /points unreachable"));
+                .thenThrow(new WeatherProviderUnavailableException("NWS /points unreachable"));
 
         assertThatThrownBy(() -> useCase.execute(CITY))
-                .isInstanceOf(IllegalStateException.class)
+                .isInstanceOf(WeatherProviderUnavailableException.class)
                 .hasMessageContaining("NWS /points unreachable");
         verify(stationsProvider, never())
                 .getStations(any(), any(Integer.class), any(Integer.class));
