@@ -263,6 +263,60 @@ git commit -m "feat(application): add GetStationsUseCase and GetStationObservati
 
 ---
 
+### Task 3b: PointsProvider Port & Gridpoint Resolution
+
+**Files:**
+- Create: `backend/weather-domain/src/main/java/io/ythalorossy/weatherapi/domain/model/Gridpoint.java`
+- Create: `backend/weather-domain/src/main/java/io/ythalorossy/weatherapi/domain/port/PointsProvider.java`
+- Create: `backend/weather-infrastructure/src/main/java/io/ythalorossy/weatherapi/infrastructure/weather/NwsPointsProvider.java`
+- Modify: `backend/weather-application/src/main/java/io/ythalorossy/weatherapi/application/usecase/GetStationsUseCase.java`
+- Modify: `backend/weather-application/src/main/java/io/ythalorossy/weatherapi/application/usecase/GetStationObservationsUseCase.java`
+- Modify: `backend/weather-application/src/test/java/io/ythalorossy/weatherapi/application/usecase/GetStationsUseCaseTest.java`
+- Modify: `backend/weather-application/src/test/java/io/ythalorossy/weatherapi/application/usecase/GetStationObservationsUseCaseTest.java`
+- Modify: `backend/weather-api/src/main/java/io/ythalorossy/weatherapi/api/config/UseCaseConfig.java`
+
+**Interfaces:**
+- Produces: `Gridpoint` record (`String gridId`, `int gridX`, `int gridY`), `PointsProvider` port, `NwsPointsProvider` adapter.
+- Consumes: `NwsPointsService` (existing internal service in `weather-infrastructure`).
+
+- [ ] **Step 1: Add Gridpoint record and PointsProvider port**
+
+Create `Gridpoint` record and `PointsProvider` interface with `Gridpoint getGridpoint(Location location)`.
+
+- [ ] **Step 2: Add NwsPointsProvider adapter**
+
+Create `NwsPointsProvider` that delegates to the existing `NwsPointsService` to resolve gridpoint coordinates from a `Location`.
+
+- [ ] **Step 3: Update GetStationsUseCase to use PointsProvider**
+
+Inject `PointsProvider` into `GetStationsUseCase`. Replace `UNKNOWN/0/0` placeholders with `gridpoint.gridId()`, `gridpoint.gridX()`, `gridpoint.gridY()`.
+
+- [ ] **Step 4: Thread Duration through GetStationObservationsUseCase**
+
+Add `Duration observationsCacheTtl` constructor parameter to `GetStationObservationsUseCase`. Update test to pass TTL.
+
+- [ ] **Step 5: Wire Cache<List<Station>> and Cache<List<StationObservation>> beans in UseCaseConfig**
+
+Add Spring `@Bean` definitions for `Cache<List<Station>>` and `Cache<List<StationObservation>>` in `UseCaseConfig.java`.
+
+- [ ] **Step 6: Update tests**
+
+Update `GetStationsUseCaseTest` to mock `PointsProvider` and verify gridpoint resolution. Update `GetStationObservationsUseCaseTest` to pass `Duration` parameter.
+
+- [ ] **Step 7: Run tests to verify pass**
+
+Run: `mvn -pl backend/weather-application test -Dtest='GetStationsUseCaseTest,GetStationObservationsUseCaseTest'`
+Expected: PASS
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add backend/weather-domain backend/weather-infrastructure backend/weather-application backend/weather-api
+git commit -m "feat: add PointsProvider port and gridpoint resolution for station observations"
+```
+
+---
+
 ### Task 4: API Controllers & Wiring
 
 **Files:**
