@@ -7,6 +7,8 @@ import io.ythalorossy.weatherapi.application.usecase.GetAfdUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetCurrentConditionsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetHourlyForecastUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetLocationMetadataUseCase;
+import io.ythalorossy.weatherapi.application.usecase.GetStationObservationsUseCase;
+import io.ythalorossy.weatherapi.application.usecase.GetStationsUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetSunTimesUseCase;
 import io.ythalorossy.weatherapi.application.usecase.GetWeatherUseCase;
 import io.ythalorossy.weatherapi.application.usecase.LocationResolver;
@@ -14,6 +16,8 @@ import io.ythalorossy.weatherapi.domain.model.AfdProduct;
 import io.ythalorossy.weatherapi.domain.model.HourlyForecast;
 import io.ythalorossy.weatherapi.domain.model.Location;
 import io.ythalorossy.weatherapi.domain.model.Observation;
+import io.ythalorossy.weatherapi.domain.model.Station;
+import io.ythalorossy.weatherapi.domain.model.StationObservation;
 import io.ythalorossy.weatherapi.domain.model.SunTimes;
 import io.ythalorossy.weatherapi.domain.model.WeatherAlert;
 import io.ythalorossy.weatherapi.domain.model.WeatherForecast;
@@ -24,6 +28,9 @@ import io.ythalorossy.weatherapi.domain.port.GeocodingProvider;
 import io.ythalorossy.weatherapi.domain.port.HourlyWeatherProvider;
 import io.ythalorossy.weatherapi.domain.port.LocationMetadataProvider;
 import io.ythalorossy.weatherapi.domain.port.ObservationProvider;
+import io.ythalorossy.weatherapi.domain.port.PointsProvider;
+import io.ythalorossy.weatherapi.domain.port.StationObservationProvider;
+import io.ythalorossy.weatherapi.domain.port.StationsProvider;
 import io.ythalorossy.weatherapi.domain.port.SunTimesProvider;
 import io.ythalorossy.weatherapi.domain.port.WeatherProvider;
 import io.ythalorossy.weatherapi.infrastructure.cache.RedisJsonCache;
@@ -91,6 +98,18 @@ public class UseCaseConfig {
     @Bean
     public Cache<SunTimes> sunTimesCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
         return cache("sun", SunTimes.class, redis, mapper, meters);
+    }
+
+    @Bean
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Cache<List<Station>> stationsCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("stations", (Class<List<Station>>) (Class) List.class, redis, mapper, meters);
+    }
+
+    @Bean
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public Cache<List<StationObservation>> stationObservationsCache(StringRedisTemplate redis, ObjectMapper mapper, MeterRegistry meters) {
+        return cache("station-obs", (Class<List<StationObservation>>) (Class) List.class, redis, mapper, meters);
     }
 
     private static <V> Cache<V> cache(String prefix, Class<V> type,
@@ -191,5 +210,30 @@ public class UseCaseConfig {
                 locationResolver,
                 metadataProvider,
                 properties.getAfdTtl());
+    }
+
+    @Bean
+    public GetStationsUseCase getStationsUseCase(
+            LocationResolver locationResolver,
+            StationsProvider stationsProvider,
+            PointsProvider pointsProvider,
+            Cache<List<Station>> stationsCache) {
+        return new GetStationsUseCase(
+                locationResolver,
+                stationsProvider,
+                pointsProvider,
+                stationsCache);
+    }
+
+    @Bean
+    public GetStationObservationsUseCase getStationObservationsUseCase(
+            StationObservationProvider observationProvider,
+            Cache<List<StationObservation>> stationObservationsCache) {
+        // ponytail: TTL hardcoded here. Move to WeatherProperties + application.yml
+        // (e.g. station-observations-ttl) when ops needs to tune it.
+        return new GetStationObservationsUseCase(
+                observationProvider,
+                stationObservationsCache,
+                java.time.Duration.ofMinutes(10));
     }
 }

@@ -10,16 +10,17 @@ import java.util.Objects;
 
 public class GetStationObservationsUseCase {
 
-    private static final Duration OBSERVATIONS_TTL = Duration.ofMinutes(10);
-
     private final StationObservationProvider observationProvider;
     private final Cache<List<StationObservation>> observationsCache;
+    private final Duration observationsCacheTtl;
 
     public GetStationObservationsUseCase(
             StationObservationProvider observationProvider,
-            Cache<List<StationObservation>> observationsCache) {
+            Cache<List<StationObservation>> observationsCache,
+            Duration observationsCacheTtl) {
         this.observationProvider = Objects.requireNonNull(observationProvider, "observationProvider");
         this.observationsCache = Objects.requireNonNull(observationsCache, "observationsCache");
+        this.observationsCacheTtl = Objects.requireNonNull(observationsCacheTtl, "observationsCacheTtl");
     }
 
     public List<StationObservation> execute(String stationId) {
@@ -29,7 +30,7 @@ public class GetStationObservationsUseCase {
         return CacheAside.getOrLoad(
                 observationsCache,
                 stationId,
-                OBSERVATIONS_TTL,
+                observationsCacheTtl,
                 () -> observationProvider.getObservations(stationId));
     }
 }
