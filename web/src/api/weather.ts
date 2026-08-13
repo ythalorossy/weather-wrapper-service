@@ -216,3 +216,35 @@ export async function fetchDiscussion(city: string): Promise<DiscussionResponse>
     `/api/v1/weather/forecast/discussion?city=${encodeURIComponent(city)}`,
   );
 }
+
+// ----- /api/v1/weather/stations -----
+
+export type Station = {
+  stationId: string;
+  name: string;
+  latitude: number;
+  longitude: number;
+};
+
+export type StationObservation = {
+  stationId: string;
+  timestamp: string;
+  temperature: Temperature;
+  humidity: number | null;
+  windSpeed: string;
+  windDirection: string;
+  rawMessage: string;
+  barometricPressure: number | null;
+};
+
+export async function fetchStations(city: string): Promise<Station[]> {
+  return fetchJson<Station[]>(
+    `/api/v1/weather/stations?city=${encodeURIComponent(city)}`,
+  );
+}
+
+export async function fetchStationObservations(stationId: string): Promise<StationObservation[]> {
+  return fetchJson<StationObservation[]>(
+    `/api/v1/weather/stations/${encodeURIComponent(stationId)}/observations`,
+  );
+}

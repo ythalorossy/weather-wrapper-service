@@ -4,8 +4,9 @@ import { ForecastCard } from './ForecastCard';
 import { HourlyList } from './HourlyList';
 import { HourlyChart } from './HourlyChart';
 import { DiscussionTab } from './DiscussionTab';
+import { StationsTab } from './StationsTab';
 
-type Mode = 'daily' | 'hourly' | 'discussion';
+type Mode = 'daily' | 'hourly' | 'discussion' | 'stations';
 
 interface Props {
   daily: WeatherResponse;
@@ -66,6 +67,19 @@ export function ForecastTabs({ daily, hourly, city, sun }: Props) {
         >
           Discussion
         </button>
+        <button
+          role="tab"
+          type="button"
+          aria-selected={mode === 'stations'}
+          onClick={() => setMode('stations')}
+          className={`px-3 py-2 text-sm font-medium -mb-px border-b-2 transition-colors ${
+            mode === 'stations'
+              ? 'border-sky-600 text-sky-700'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          Stations
+        </button>
       </div>
 
       <div role="tabpanel">
@@ -78,8 +92,10 @@ export function ForecastTabs({ daily, hourly, city, sun }: Props) {
             )}
             <HourlyList data={hourly} rowRefs={rowRefs} hours={24} />
           </div>
-        ) : (
+        ) : mode === 'discussion' ? (
           <DiscussionTab city={city} />
+        ) : (
+          <StationsTab city={city} />
         )}
       </div>
     </div>
