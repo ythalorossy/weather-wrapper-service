@@ -20,15 +20,13 @@ export function RadarCard({ latitude, longitude, displayName }: RadarCardProps) 
         <h3 className="text-sm uppercase tracking-wider text-slate-500">
           Radar{displayName ? ` — ${displayName}` : ''}
         </h3>
-        {!loaded && (
-          <button
-            type="button"
-            onClick={() => setLoaded(true)}
-            className="text-xs underline hover:text-slate-700"
-          >
-            Show radar map
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => setLoaded((v) => !v)}
+          className="text-xs underline hover:text-slate-700"
+        >
+          {loaded ? 'Hide radar map' : 'Show radar map'}
+        </button>
       </header>
       {loaded ? (
         <div className="relative w-full h-80 overflow-hidden rounded">

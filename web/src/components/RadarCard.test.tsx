@@ -47,4 +47,36 @@ describe('RadarCard', () => {
     expect(iframe.title).toBe('Weather radar map');
     expect(iframe.src).toContain('21.3069,-157.8583');
   });
+
+  it('hides the iframe and reverts the button label when clicked while loaded', () => {
+    render(
+      <RadarCard
+        latitude={38.8816}
+        longitude={-77.0910}
+        displayName="Arlington, VA"
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /show radar map/i }));
+    expect(screen.queryByTitle(/weather radar map/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /hide radar map/i }));
+    expect(screen.queryByTitle(/weather radar map/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show radar map/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('toggle is a no-op round-trip: click → click returns to initial state', () => {
+    render(<RadarCard latitude={38.8816} longitude={-77.0910} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /show radar map/i }));
+    expect(screen.queryByTitle(/weather radar map/i)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /hide radar map/i }));
+    expect(screen.queryByTitle(/weather radar map/i)).not.toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /show radar map/i }),
+    ).toBeInTheDocument();
+  });
 });
